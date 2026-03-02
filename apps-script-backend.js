@@ -91,7 +91,52 @@ function getProduction() {
 function getSales() {
   const sheet = getSheet('판매기록',
     ['업로드일', '파일명', '판매일', '메뉴', '수량', '금액', '타임스탬프']);
-  return { data: sheetToJson(sheet) };
+  const data = sheetToJson(sheet);
+
+  // 토스포스 '상품주문상세내역' 시트 자동 병합
+  const posSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('상품주문상세내역');
+  if (posSheet) {
+    sheetToJson(posSheet).forEach(function(row) {
+      // 취소·환불 제외
+      const status = String(row['결제상태'] || '').trim();
+      if (status.includes('취소') || status.includes('환불')) return;
+
+      // 날짜: Date 객체 또는 문자열 처리
+      const dateVal = row['주문기준일자'];
+      let dateStr;
+      try {
+        dateStr = (dateVal instanceof Date)
+          ? Utilities.formatDate(dateVal, 'Asia/Seoul', 'yyyy-MM-dd')
+          : String(dateVal).slice(0, 10);
+      } catch(e) { dateStr = ''; }
+
+      const menu = String(row['상품명'] || '').trim();
+      if (!menu) return;
+
+      const qty = parseInt(row['수량']) || 1;
+
+      // '실판매금액' 포함 컬럼 탐색 (헤더에 줄바꿈 포함 가능)
+      let amount = 0;
+      Object.keys(row).forEach(function(key) {
+        if (String(key).includes('실판매금액')) {
+          amount = parseFloat(String(row[key]).replace(/[,\s]/g, '')) || 0;
+        }
+      });
+      if (amount <= 0) return; // 0원·음수(환불) 제외
+
+      data.push({
+        '업로드일': dateStr,
+        '파일명': '상품주문상세내역',
+        '판매일': dateStr,
+        '메뉴': menu,
+        '수량': qty,
+        '금액': amount,
+        '타임스탬프': ''
+      });
+    });
+  }
+
+  return { data: data };
 }
 
 function getDashboard() {
