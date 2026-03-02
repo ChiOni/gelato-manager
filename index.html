@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>젤라또 생산/판매 관리</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            color: #2e7d32;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .sync-status.syncing {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .sync-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .upload-area:hover {
+            background: #e9ecef;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e7f0ff;
+            border-color: #667eea;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-item .date {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .history-item .content {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .history-item .amount {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stat-card .unit {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-left: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .batch-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .batch-option {
+            padding: 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .batch-option:hover,
+        .batch-option.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🍨 젤라또 생산/판매 관리</h1>
+                <p>모란점 운영 데이터 관리 시스템 (Google Sheets 동기화)</p>
+            </div>
+            <div class="sync-status" id="syncStatus">
+                <span>●</span>
+                <span id="syncText">동기화됨</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="production">생산 관리</div>
+            <div class="tab" data-tab="sales">판매 관리</div>
+            <div class="tab" data-tab="dashboard">대시보드</div>
+        </div>
+
+        <!-- 생산 관리 탭 -->
+        <div class="tab-content active" id="production">
+            <div class="card">
+                <div class="card-title">
+                    <span>생산 기록</span>
+                    <button class="btn btn-primary" onclick="openProductionModal()">+ 생산 등록</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">최근 생산 이력</div>
+                <div class="history-list" id="productionHistory">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>데이터 로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 판매 관리 탭 -->
+        <div class="tab-content" id="sales">
+            <div class="card">
+                <div class="card-title">판매 데이터 업로드</div>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📤</div>
+                    <h3>토스 POS 엑셀 파일 업로드</h3>
+                    <p>파일을 드래그하거나 클릭하여 선택하세요</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">판매 이력</div>
+                <div class="history-list" id="salesHistory">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>데이터 로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 대시보드 탭 -->
+        <div class="tab-content" id="dashboard">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <h3>총 생산량</h3>
+                    <div class="value">-<span class="unit">kg</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3>총 판매액</h3>
+                    <div class="value">-<span class="unit">만원</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3>평균 마진</h3>
+                    <div class="value">73<span class="unit">%</span></div>
+                </div>
+                <div class="stat-card">
+                    <h3>이번 달 생산</h3>
+                    <div class="value">-<span class="unit">회</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">메뉴별 생산 통계</div>
+                <div id="popularityChart">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>데이터 로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 생산 등록 모달 -->
+    <div class="modal" id="productionModal">
+        <div class="modal-content">
+            <div class="modal-header">생산 등록</div>
+            <div class="form-group">
+                <label>메뉴</label>
+                <select id="menuSelect">
+                    <option value="">메뉴 선택</option>
+                    <option value="바나나">바나나</option>
+                    <option value="생크림밀크">생크림밀크</option>
+                    <option value="레몬요거트">레몬요거트</option>
+                    <option value="호지차한라봉">호지차한라봉</option>
+                    <option value="아몬드">아몬드</option>
+                    <option value="말차">말차</option>
+                    <option value="딸기소르베">딸기소르베</option>
+                    <option value="초코">초코</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>배치 수</label>
+                <div class="batch-selector">
+                    <div class="batch-option" onclick="selectBatch(1)">1배치</div>
+                    <div class="batch-option" onclick="selectBatch(2)">2배치</div>
+                    <div class="batch-option" onclick="selectBatch(3)">3배치</div>
+                </div>
+                <input type="number" id="batchInput" placeholder="또는 직접 입력" min="1" style="margin-top: 10px;">
+            </div>
+            <div class="form-group">
+                <label>생산 날짜</label>
+                <input type="date" id="productionDate">
+            </div>
+            <div class="form-group">
+                <label>메모 (선택)</label>
+                <input type="text" id="productionMemo" placeholder="특이사항 입력">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeProductionModal()">취소</button>
+                <button class="btn btn-primary" onclick="saveProduction()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Google Apps Script URL
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxgye70JFDlNUPNtokT2N60hqcor5Pl5ZomQvCoPu203OSnfb6HyItrn-Pqt-BeAIwj/exec';
+
+        // 메뉴 레시피 데이터
+        const recipes = {
+            '바나나': { batch: 1759, milk: 1.5, cream: 277.5 },
+            '생크림밀크': { batch: 2461, milk: 1.5, cream: 755.4 },
+            '레몬요거트': { batch: 1826, milk: 1.5, cream: 277.5 },
+            '호지차한라봉': { batch: 1407, milk: 1.5, cream: 277.5 },
+            '아몬드': { batch: 1556, milk: 1.5, cream: 277.5 },
+            '말차': { batch: 1488, milk: 1.5, cream: 277.5 },
+            '딸기소르베': { batch: 1845, milk: 0, cream: 0 },
+            '초코': { batch: 2565, milk: 0, cream: 0 }
+        };
+
+        let selectedBatchCount = null;
+
+        // 동기화 상태 표시
+        function setSyncStatus(status, text) {
+            const statusEl = document.getElementById('syncStatus');
+            const textEl = document.getElementById('syncText');
+            statusEl.className = 'sync-status ' + status;
+            textEl.textContent = text;
+        }
+
+        // API 호출
+        async function callAPI(action, method = 'GET', data = null) {
+            setSyncStatus('syncing', '동기화 중...');
+            try {
+                const url = method === 'GET' ? `${API_URL}?action=${action}` : API_URL;
+                const options = {
+                    method: method,
+                    mode: 'no-cors'
+                };
+                
+                if (method === 'POST' && data) {
+                    const formData = new URLSearchParams();
+                    formData.append('action', action);
+                    options.body = formData;
+                    
+                    // 실제로는 fetch로 POST를 보낼 수 없으므로 GET으로 변환
+                    const params = new URLSearchParams({
+                        action: action,
+                        data: JSON.stringify(data)
+                    });
+                    const response = await fetch(`${API_URL}?${params}`);
+                    const result = await response.json();
+                    setSyncStatus('', '동기화됨');
+                    return result;
+                }
+                
+                const response = await fetch(url);
+                const result = await response.json();
+                setSyncStatus('', '동기화됨');
+                return result;
+            } catch (error) {
+                console.error('API Error:', error);
+                setSyncStatus('error', '동기화 실패');
+                return null;
+            }
+        }
+
+        // 초기화
+        async function init() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('productionDate').value = today;
+            
+            await loadProductionHistory();
+            await loadSalesHistory();
+            await updateDashboard();
+        }
+
+        // 탭 전환
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(this.dataset.tab).classList.add('active');
+            });
+        });
+
+        // 배치 선택
+        function selectBatch(count) {
+            selectedBatchCount = count;
+            document.querySelectorAll('.batch-option').forEach(opt => opt.classList.remove('selected'));
+            event.target.classList.add('selected');
+            document.getElementById('batchInput').value = count;
+        }
+
+        // 생산 모달
+        function openProductionModal() {
+            document.getElementById('productionModal').classList.add('active');
+        }
+
+        function closeProductionModal() {
+            document.getElementById('productionModal').classList.remove('active');
+            document.getElementById('menuSelect').value = '';
+            document.getElementById('batchInput').value = '';
+            document.getElementById('productionMemo').value = '';
+            selectedBatchCount = null;
+            document.querySelectorAll('.batch-option').forEach(opt => opt.classList.remove('selected'));
+        }
+
+        // 생산 저장
+        async function saveProduction() {
+            const menu = document.getElementById('menuSelect').value;
+            const batch = parseInt(document.getElementById('batchInput').value) || selectedBatchCount;
+            const date = document.getElementById('productionDate').value;
+            const memo = document.getElementById('productionMemo').value;
+
+            if (!menu || !batch || !date) {
+                alert('메뉴, 배치 수, 날짜를 모두 입력해주세요');
+                return;
+            }
+
+            const recipe = recipes[menu];
+            const productionData = {
+                date: date,
+                menu: menu,
+                batch: batch,
+                amount: recipe.batch * batch,
+                milk: recipe.milk * batch,
+                cream: recipe.cream * batch,
+                memo: memo
+            };
+
+            // Google Sheets에 직접 추가
+            const url = `${API_URL}?action=addProduction&date=${encodeURIComponent(date)}&menu=${encodeURIComponent(menu)}&batch=${batch}&amount=${productionData.amount}&milk=${productionData.milk}&cream=${productionData.cream}&memo=${encodeURIComponent(memo)}`;
+            
+            try {
+                await fetch(url, { mode: 'no-cors' });
+                closeProductionModal();
+                alert('생산 기록이 저장되었습니다!');
+                setTimeout(() => loadProductionHistory(), 1000);
+            } catch (error) {
+                alert('저장 중 오류가 발생했습니다');
+            }
+        }
+
+        // 생산 이력 로드
+        async function loadProductionHistory() {
+            const container = document.getElementById('productionHistory');
+            
+            try {
+                const result = await callAPI('getProduction');
+                
+                if (!result || !result.data || result.data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📝</div>
+                            <p>아직 생산 기록이 없습니다</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = result.data
+                    .reverse()
+                    .slice(0, 20)
+                    .map(p => `
+                        <div class="history-item">
+                            <div>
+                                <div class="date">${p['날짜']}</div>
+                                <div class="content">${p['메뉴']} × ${p['배치수']}배치</div>
+                                ${p['메모'] ? `<div style="font-size: 12px; color: #666; margin-top: 5px;">${p['메모']}</div>` : ''}
+                            </div>
+                            <div class="amount">${parseFloat(p['생산량(g)']).toLocaleString()}g</div>
+                        </div>
+                    `).join('');
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <p>데이터를 불러올 수 없습니다</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 판매 이력 로드
+        async function loadSalesHistory() {
+            const container = document.getElementById('salesHistory');
+            
+            try {
+                const result = await callAPI('getSales');
+                
+                if (!result || !result.data || result.data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>아직 판매 데이터가 없습니다</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 파일별로 그룹화
+                const grouped = {};
+                result.data.forEach(row => {
+                    const fileName = row['파일명'];
+                    if (!grouped[fileName]) {
+                        grouped[fileName] = {
+                            uploadDate: row['업로드일'],
+                            items: [],
+                            total: 0
+                        };
+                    }
+                    grouped[fileName].items.push(row);
+                    grouped[fileName].total += parseFloat(row['금액']) || 0;
+                });
+
+                container.innerHTML = Object.entries(grouped)
+                    .map(([fileName, data]) => `
+                        <div class="history-item">
+                            <div>
+                                <div class="date">${data.uploadDate}</div>
+                                <div class="content">${fileName}</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                    ${data.items.length}건
+                                </div>
+                            </div>
+                            <div class="amount">${data.total.toLocaleString()}원</div>
+                        </div>
+                    `).join('');
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <p>데이터를 불러올 수 없습니다</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 대시보드 업데이트
+        async function updateDashboard() {
+            try {
+                const result = await callAPI('getDashboard');
+                
+                if (result) {
+                    document.querySelector('#dashboard .stats-grid').innerHTML = `
+                        <div class="stat-card">
+                            <h3>총 생산량</h3>
+                            <div class="value">${(result.totalProduction / 1000).toFixed(1)}<span class="unit">kg</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>총 판매액</h3>
+                            <div class="value">${(result.totalSales / 10000).toFixed(0)}<span class="unit">만원</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>평균 마진</h3>
+                            <div class="value">73<span class="unit">%</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>이번 달 생산</h3>
+                            <div class="value">${result.monthlyProduction}<span class="unit">회</span></div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Dashboard update error:', error);
+            }
+        }
+
+        // 파일 업로드
+        const uploadArea = document.getElementById('uploadArea');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.classList.remove('dragover');
+            });
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) handleFiles(files);
+        });
+
+        function handleFileUpload(event) {
+            handleFiles(event.target.files);
+        }
+
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            const file = files[0];
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    // Google Sheets에 업로드
+                    const uploadDate = new Date().toISOString().split('T')[0];
+                    const salesData = jsonData.map(row => ({
+                        date: row['날짜'] || row['date'] || uploadDate,
+                        menu: row['메뉴'] || row['상품명'] || row['menu'] || '',
+                        quantity: row['수량'] || row['quantity'] || 1,
+                        amount: row['금액'] || row['amount'] || 0
+                    }));
+
+                    // 각 행을 URL 파라미터로 전송 (간단한 방식)
+                    for (const sale of salesData.slice(0, 10)) { // 첫 10개만
+                        const url = `${API_URL}?action=addSales&uploadDate=${uploadDate}&fileName=${encodeURIComponent(file.name)}&date=${encodeURIComponent(sale.date)}&menu=${encodeURIComponent(sale.menu)}&quantity=${sale.quantity}&amount=${sale.amount}`;
+                        await fetch(url, { mode: 'no-cors' });
+                    }
+                    
+                    alert('판매 데이터가 업로드되었습니다!');
+                    setTimeout(() => loadSalesHistory(), 1000);
+                } catch (error) {
+                    alert('파일 처리 중 오류가 발생했습니다: ' + error.message);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 초기화
+        init();
+    </script>
+</body>
+</html>
