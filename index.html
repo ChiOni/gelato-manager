@@ -1,859 +1,1083 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>젤라또 생산/판매 관리</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>젤라또 대시보드 — 모란점</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #111217;
+  --panel:   #181b1f;
+  --hover:   #1e2128;
+  --border:  #2d3138;
+  --t1:      #d8dbe2;
+  --t2:      #9ca3af;
+  --t3:      #6b7280;
+  --green:   #73bf69;
+  --blue:    #5794f2;
+  --orange:  #ff9830;
+  --red:     #f2495c;
+  --purple:  #b877d9;
+  --yellow:  #fade2a;
+}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+* { margin:0; padding:0; box-sizing:border-box; }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  font-size: 14px;
+  min-height: 100vh;
+}
 
-        .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+/* ── Topbar ── */
+.topbar {
+  height: 48px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-logo { font-size:15px; font-weight:700; letter-spacing:-.5px; }
+.topbar-sep  { color: var(--border); }
+.topbar-sub  { font-size:13px; color:var(--t2); }
+.topbar-spacer { flex:1; }
+.sync-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--green);
+  transition: background .3s;
+}
+.sync-dot.syncing { background:var(--orange); animation: blink 1s infinite; }
+.sync-dot.error   { background:var(--red); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.sync-lbl { font-size:12px; color:var(--t2); }
+.clock { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--t3); }
+.topbar-btn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--t2); padding:4px 12px; border-radius:2px;
+  font-size:12px; cursor:pointer; font-family:inherit; transition: all .15s;
+}
+.topbar-btn:hover { background:var(--hover); color:var(--t1); }
 
-        .header h1 {
-            color: #667eea;
-            font-size: 32px;
-            margin-bottom: 5px;
-        }
+/* ── Nav ── */
+.nav {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  padding: 0 16px;
+}
+.nav-tab {
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--t2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+  user-select: none;
+}
+.nav-tab:hover { color:var(--t1); }
+.nav-tab.active { color:var(--t1); border-bottom-color:var(--blue); }
 
-        .header p {
-            color: #666;
-            font-size: 14px;
-        }
+/* ── Pages ── */
+.page { display:none; padding:12px 16px; }
+.page.active { display:block; }
 
-        .sync-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 20px;
-            background: #e8f5e9;
-            border-radius: 8px;
-            color: #2e7d32;
-            font-size: 14px;
-            font-weight: 600;
-        }
+/* ── Panel ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+.panel-hd {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-title {
+  font-size:11px; font-weight:600;
+  color:var(--t3); text-transform:uppercase; letter-spacing:.6px;
+}
+.panel-bd { padding:16px; }
 
-        .sync-status.syncing {
-            background: #fff3cd;
-            color: #856404;
-        }
+/* ── Grid ── */
+.g5 { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:8px; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.mb8 { margin-bottom:8px; }
 
-        .sync-status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
+@media(max-width:1200px){ .g5{grid-template-columns:repeat(3,1fr);} }
+@media(max-width:800px) { .g5{grid-template-columns:repeat(2,1fr);} .g2{grid-template-columns:1fr;} }
 
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
+/* ── KPI card ── */
+.kpi {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--blue);
+  padding: 14px 16px;
+  border-radius: 2px;
+  position: relative;
+}
+.kpi.c-green  { border-left-color: var(--green); }
+.kpi.c-orange { border-left-color: var(--orange); }
+.kpi.c-purple { border-left-color: var(--purple); }
+.kpi.c-red    { border-left-color: var(--red); }
+.kpi-lbl { font-size:11px; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+.kpi-val { font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:600; line-height:1; color:var(--t1); }
+.kpi-unit { font-size:13px; color:var(--t2); margin-left:3px; }
+.kpi-sub { font-size:11px; color:var(--t3); margin-top:5px; }
+.kpi-sub.up   { color:var(--green); }
+.kpi-sub.down { color:var(--red); }
+.prog-bg { height:3px; background:var(--border); border-radius:2px; margin-top:6px; }
+.prog-fill { height:100%; border-radius:2px; background:var(--orange); transition:width .6s ease; }
+.prog-fill.ok { background:var(--green); }
 
-        .tab {
-            background: white;
-            padding: 15px 30px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #666;
-            transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        }
+/* ── Chart panel ── */
+.chart-panel { background:var(--panel); border:1px solid var(--border); border-radius:2px; margin-bottom:8px; }
+.chart-bd { padding:12px 16px; }
+.h180 { height:180px; }
+.h220 { height:220px; }
 
-        .tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-        }
+/* ── Table ── */
+.tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.tbl th {
+  font-size:11px; font-weight:600; color:var(--t3);
+  text-transform:uppercase; letter-spacing:.5px;
+  padding:8px 12px; border-bottom:1px solid var(--border);
+  text-align:left; background:var(--panel); position:sticky; top:0;
+}
+.tbl td {
+  padding:9px 12px;
+  border-bottom:1px solid rgba(45,49,56,.5);
+  color:var(--t1);
+}
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:var(--hover); }
+.tbl .r { text-align:right; font-family:'JetBrains Mono',monospace; }
+.scroll { overflow-x:auto; max-height:320px; overflow-y:auto; }
+.scroll::-webkit-scrollbar { width:3px; height:3px; }
+.scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.empty { text-align:center; padding:32px; color:var(--t3); font-size:13px; }
 
-        .tab-content {
-            display: none;
-        }
+/* ── Badge ── */
+.badge {
+  display:inline-block; padding:2px 7px; border-radius:2px;
+  font-size:11px; font-weight:600; letter-spacing:.2px;
+}
+.b-ban  { background:rgba(250,222,42,.15); color:var(--yellow); }
+.b-mil  { background:rgba(87,148,242,.15); color:var(--blue); }
+.b-lem  { background:rgba(115,191,105,.15); color:var(--green); }
+.b-hoj  { background:rgba(255,152,48,.15); color:var(--orange); }
+.b-alm  { background:rgba(184,119,217,.15); color:var(--purple); }
+.b-mat  { background:rgba(115,191,105,.2); color:#a0d898; }
+.b-str  { background:rgba(242,73,92,.15); color:var(--red); }
+.b-cho  { background:rgba(198,126,58,.2); color:#c67e3a; }
+.b-prod { background:rgba(87,148,242,.12); color:var(--blue); }
+.b-sale { background:rgba(115,191,105,.12); color:var(--green); }
 
-        .tab-content.active {
-            display: block;
-        }
+/* ── Form ── */
+.form-row { margin-bottom:14px; }
+.lbl {
+  display:block; font-size:11px; color:var(--t2);
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;
+}
+.inp {
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:2px; padding:8px 11px;
+  color:var(--t1); font-size:13px; font-family:inherit;
+  width:100%; transition:border .15s;
+}
+.inp:focus { outline:none; border-color:var(--blue); }
+select.inp option { background:var(--panel); }
 
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
+/* menu & batch quick-select */
+.menu-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+.sel-btn {
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:2px; color:var(--t2); padding:9px 6px;
+  font-size:12px; cursor:pointer; text-align:center;
+  transition:all .15s; font-family:inherit;
+}
+.sel-btn:hover  { border-color:var(--blue); color:var(--t1); }
+.sel-btn.on     { background:rgba(87,148,242,.12); border-color:var(--blue); color:var(--blue); }
+.row-btns { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 
-        .card-title {
-            font-size: 20px;
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+/* ── Action buttons ── */
+.btn {
+  padding:8px 18px; border:none; border-radius:2px;
+  font-size:13px; font-family:inherit; font-weight:500;
+  cursor:pointer; transition:all .15s;
+}
+.btn-p { background:var(--blue); color:#fff; }
+.btn-p:hover { background:#4a84e0; }
+.btn-g { background:transparent; border:1px solid var(--border); color:var(--t2); }
+.btn-g:hover { background:var(--hover); color:var(--t1); }
 
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 14px;
-        }
+/* preview box */
+.preview-box {
+  background:var(--bg); border:1px solid var(--blue);
+  border-radius:2px; padding:12px 14px;
+  display:none;
+}
+.preview-box .big {
+  font-family:'JetBrains Mono',monospace; font-size:22px;
+  color:var(--blue); line-height:1;
+}
+.preview-box .sm { font-size:11px; color:var(--t3); margin-top:4px; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
+/* ── Upload zone ── */
+.drop-zone {
+  border:1px dashed var(--border); border-radius:2px;
+  padding:40px 32px; text-align:center; cursor:pointer;
+  transition:all .2s;
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color:var(--blue); background:rgba(87,148,242,.04);
+}
+.drop-icon { font-size:28px; margin-bottom:10px; opacity:.5; }
+.drop-title { font-size:14px; color:var(--t1); margin-bottom:3px; }
+.drop-sub { font-size:12px; color:var(--t3); }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
+/* ── Filter row ── */
+.filter-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.filter-row .inp { width:auto; }
 
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f8f9fa;
-        }
-
-        .upload-area:hover {
-            background: #e9ecef;
-            border-color: #764ba2;
-        }
-
-        .upload-area.dragover {
-            background: #e7f0ff;
-            border-color: #667eea;
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-
-        .history-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .history-item {
-            background: #f8f9fa;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid #667eea;
-        }
-
-        .history-item .date {
-            color: #666;
-            font-size: 13px;
-            margin-bottom: 5px;
-        }
-
-        .history-item .content {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .history-item .amount {
-            font-size: 20px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #667eea;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 25px;
-        }
-
-        .modal-actions .btn {
-            flex: 1;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-
-        .stat-card h3 {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-bottom: 10px;
-        }
-
-        .stat-card .value {
-            font-size: 32px;
-            font-weight: bold;
-        }
-
-        .stat-card .unit {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-left: 5px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
-        .batch-selector {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .batch-option {
-            padding: 12px;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 600;
-            color: #667eea;
-        }
-
-        .batch-option:hover,
-        .batch-option.selected {
-            background: #667eea;
-            color: white;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #667eea;
-        }
-
-        .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-        }
-    </style>
+/* ── Toast ── */
+.toast {
+  position:fixed; bottom:20px; right:20px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:2px; padding:10px 18px; font-size:13px;
+  z-index:1000; opacity:0; transform:translateY(6px);
+  transition:all .2s; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.ok   { border-left:3px solid var(--green); }
+.toast.err  { border-left:3px solid var(--red); }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div>
-                <h1>🍨 젤라또 생산/판매 관리</h1>
-                <p>모란점 운영 데이터 관리 시스템 (Google Sheets 동기화)</p>
-            </div>
-            <div class="sync-status" id="syncStatus">
-                <span>●</span>
-                <span id="syncText">동기화됨</span>
-            </div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <span class="topbar-logo">GELATO</span>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-sub">모란점 운영 대시보드</span>
+  <div class="topbar-spacer"></div>
+  <span class="clock" id="clock"></span>
+  <div class="sync-dot" id="syncDot"></div>
+  <span class="sync-lbl" id="syncLbl">연결됨</span>
+  <button class="topbar-btn" onclick="refreshAll()">↻ 새로고침</button>
+</div>
+
+<!-- Nav -->
+<div class="nav">
+  <div class="nav-tab active" data-page="dash">대시보드</div>
+  <div class="nav-tab" data-page="prod">생산 등록</div>
+  <div class="nav-tab" data-page="upload">판매 업로드</div>
+  <div class="nav-tab" data-page="hist">이력 조회</div>
+</div>
+
+<!-- ════ DASHBOARD ════ -->
+<div class="page active" id="page-dash">
+
+  <!-- KPI row -->
+  <div class="g5">
+    <div class="kpi c-blue">
+      <div class="kpi-lbl">이번달 매출</div>
+      <div><span class="kpi-val" id="k-ms">—</span><span class="kpi-unit">원</span></div>
+      <div class="kpi-sub" id="k-ms-sub">로딩 중...</div>
+    </div>
+    <div class="kpi c-green">
+      <div class="kpi-lbl">예상 순이익</div>
+      <div><span class="kpi-val" id="k-pr">—</span><span class="kpi-unit">원</span></div>
+      <div class="kpi-sub" id="k-pr-sub">매출×60% − 600만</div>
+    </div>
+    <div class="kpi c-orange">
+      <div class="kpi-lbl">목표 달성률</div>
+      <div><span class="kpi-val" id="k-gp">—</span><span class="kpi-unit">%</span></div>
+      <div class="prog-bg"><div class="prog-fill" id="k-gp-bar" style="width:0%"></div></div>
+      <div class="kpi-sub" id="k-gp-sub">목표 매출 2,667만원</div>
+    </div>
+    <div class="kpi c-purple">
+      <div class="kpi-lbl">오늘 판매</div>
+      <div><span class="kpi-val" id="k-td">—</span><span class="kpi-unit">건</span></div>
+      <div class="kpi-sub" id="k-td-sub">—원</div>
+    </div>
+    <div class="kpi c-red">
+      <div class="kpi-lbl">이번달 생산</div>
+      <div><span class="kpi-val" id="k-bp">—</span><span class="kpi-unit">배치</span></div>
+      <div class="kpi-sub" id="k-bp-sub">누적 생산량</div>
+    </div>
+  </div>
+
+  <!-- 매출 추이 -->
+  <div class="chart-panel mb8">
+    <div class="panel-hd">
+      <span class="panel-title">일별 매출 추이</span>
+      <div class="filter-row" style="gap:6px;">
+        <select class="inp" id="trend-days" onchange="drawTrend()" style="font-size:12px;padding:3px 8px;width:auto;">
+          <option value="30">30일</option>
+          <option value="14">14일</option>
+          <option value="7">7일</option>
+        </select>
+      </div>
+    </div>
+    <div class="chart-bd h180"><canvas id="cTrend"></canvas></div>
+  </div>
+
+  <!-- 메뉴 비중 + 월별 -->
+  <div class="g2">
+    <div class="chart-panel" style="margin-bottom:0;">
+      <div class="panel-hd"><span class="panel-title">메뉴별 판매 비중 (이번달)</span></div>
+      <div class="chart-bd h220" style="display:flex;align-items:center;justify-content:center;">
+        <canvas id="cMix" style="max-width:220px;max-height:220px;"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel" style="margin-bottom:0;">
+      <div class="panel-hd"><span class="panel-title">월별 매출 vs 목표 (최근 6개월)</span></div>
+      <div class="chart-bd h220"><canvas id="cMonth"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Recent tables -->
+  <div class="g2" style="margin-top:8px;">
+    <div class="panel">
+      <div class="panel-hd"><span class="panel-title">최근 생산</span></div>
+      <div class="scroll">
+        <table class="tbl">
+          <thead><tr><th>날짜</th><th>메뉴</th><th>배치</th><th class="r">생산량</th></tr></thead>
+          <tbody id="tb-rprod"><tr><td colspan="4" class="empty">로딩...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-hd"><span class="panel-title">최근 판매</span></div>
+      <div class="scroll">
+        <table class="tbl">
+          <thead><tr><th>날짜</th><th>메뉴</th><th class="r">수량</th><th class="r">금액</th></tr></thead>
+          <tbody id="tb-rsale"><tr><td colspan="4" class="empty">로딩...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PRODUCTION ════ -->
+<div class="page" id="page-prod">
+  <div class="g2">
+
+    <!-- Form -->
+    <div class="panel">
+      <div class="panel-hd"><span class="panel-title">생산 등록</span></div>
+      <div class="panel-bd">
+
+        <div class="form-row">
+          <div class="lbl">메뉴</div>
+          <div class="menu-grid">
+            <div class="sel-btn" data-m="바나나"      onclick="pickMenu(this)">바나나</div>
+            <div class="sel-btn" data-m="생크림밀크"  onclick="pickMenu(this)">생크림밀크</div>
+            <div class="sel-btn" data-m="레몬요거트"  onclick="pickMenu(this)">레몬요거트</div>
+            <div class="sel-btn" data-m="호지차한라봉" onclick="pickMenu(this)">호지차한라봉</div>
+            <div class="sel-btn" data-m="아몬드"      onclick="pickMenu(this)">아몬드</div>
+            <div class="sel-btn" data-m="말차"        onclick="pickMenu(this)">말차</div>
+            <div class="sel-btn" data-m="딸기소르베"  onclick="pickMenu(this)">딸기소르베</div>
+            <div class="sel-btn" data-m="초코"        onclick="pickMenu(this)">초코</div>
+          </div>
         </div>
 
-        <div class="tabs">
-            <div class="tab active" data-tab="production">생산 관리</div>
-            <div class="tab" data-tab="sales">판매 관리</div>
-            <div class="tab" data-tab="dashboard">대시보드</div>
+        <div class="form-row">
+          <div class="lbl">배치 수</div>
+          <div class="row-btns">
+            <div class="sel-btn" onclick="pickBatch(this,1)" style="padding:8px 18px;">1</div>
+            <div class="sel-btn" onclick="pickBatch(this,2)" style="padding:8px 18px;">2</div>
+            <div class="sel-btn" onclick="pickBatch(this,3)" style="padding:8px 18px;">3</div>
+            <input type="number" class="inp" id="batchIn" min="1" max="20"
+              placeholder="직접 입력" style="width:110px;" oninput="onBatchIn()">
+          </div>
         </div>
 
-        <!-- 생산 관리 탭 -->
-        <div class="tab-content active" id="production">
-            <div class="card">
-                <div class="card-title">
-                    <span>생산 기록</span>
-                    <button class="btn btn-primary" onclick="openProductionModal()">+ 생산 등록</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">최근 생산 이력</div>
-                <div class="history-list" id="productionHistory">
-                    <div class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>데이터 로딩 중...</p>
-                    </div>
-                </div>
-            </div>
+        <div class="preview-box" id="prodPrev">
+          <div class="sm">예상 생산량</div>
+          <div class="big" id="prevVal">—</div>
+          <div class="sm" id="prevSub">—</div>
         </div>
 
-        <!-- 판매 관리 탭 -->
-        <div class="tab-content" id="sales">
-            <div class="card">
-                <div class="card-title">판매 데이터 업로드</div>
-                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                    <div class="upload-icon">📤</div>
-                    <h3>토스 POS 엑셀 파일 업로드</h3>
-                    <p>파일을 드래그하거나 클릭하여 선택하세요</p>
-                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">판매 이력</div>
-                <div class="history-list" id="salesHistory">
-                    <div class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>데이터 로딩 중...</p>
-                    </div>
-                </div>
-            </div>
+        <div class="form-row" style="margin-top:14px;">
+          <label class="lbl">날짜</label>
+          <input type="date" class="inp" id="prodDate">
+        </div>
+        <div class="form-row">
+          <label class="lbl">메모 (선택)</label>
+          <input type="text" class="inp" id="prodMemo" placeholder="특이사항">
         </div>
 
-        <!-- 대시보드 탭 -->
-        <div class="tab-content" id="dashboard">
-            <div class="stats-grid" id="statsGrid">
-                <div class="stat-card">
-                    <h3>총 생산량</h3>
-                    <div class="value">-<span class="unit">kg</span></div>
-                </div>
-                <div class="stat-card">
-                    <h3>총 판매액</h3>
-                    <div class="value">-<span class="unit">만원</span></div>
-                </div>
-                <div class="stat-card">
-                    <h3>평균 마진</h3>
-                    <div class="value">73<span class="unit">%</span></div>
-                </div>
-                <div class="stat-card">
-                    <h3>이번 달 생산</h3>
-                    <div class="value">-<span class="unit">회</span></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">메뉴별 생산 통계</div>
-                <div id="popularityChart">
-                    <div class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>데이터 로딩 중...</p>
-                    </div>
-                </div>
-            </div>
+        <div class="row-btns">
+          <button class="btn btn-p" onclick="saveProd()">저장</button>
+          <button class="btn btn-g" onclick="resetProdForm()">초기화</button>
         </div>
+      </div>
     </div>
 
-    <!-- 생산 등록 모달 -->
-    <div class="modal" id="productionModal">
-        <div class="modal-content">
-            <div class="modal-header">생산 등록</div>
-            <div class="form-group">
-                <label>메뉴</label>
-                <select id="menuSelect">
-                    <option value="">메뉴 선택</option>
-                    <option value="바나나">바나나</option>
-                    <option value="생크림밀크">생크림밀크</option>
-                    <option value="레몬요거트">레몬요거트</option>
-                    <option value="호지차한라봉">호지차한라봉</option>
-                    <option value="아몬드">아몬드</option>
-                    <option value="말차">말차</option>
-                    <option value="딸기소르베">딸기소르베</option>
-                    <option value="초코">초코</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>배치 수</label>
-                <div class="batch-selector">
-                    <div class="batch-option" onclick="selectBatch(1)">1배치</div>
-                    <div class="batch-option" onclick="selectBatch(2)">2배치</div>
-                    <div class="batch-option" onclick="selectBatch(3)">3배치</div>
-                </div>
-                <input type="number" id="batchInput" placeholder="또는 직접 입력" min="1" style="margin-top: 10px;">
-            </div>
-            <div class="form-group">
-                <label>생산 날짜</label>
-                <input type="date" id="productionDate">
-            </div>
-            <div class="form-group">
-                <label>메모 (선택)</label>
-                <input type="text" id="productionMemo" placeholder="특이사항 입력">
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeProductionModal()">취소</button>
-                <button class="btn btn-primary" onclick="saveProduction()">저장</button>
-            </div>
-        </div>
+    <!-- Production history -->
+    <div class="panel">
+      <div class="panel-hd"><span class="panel-title">생산 이력 전체</span></div>
+      <div class="scroll" style="max-height:560px;">
+        <table class="tbl">
+          <thead><tr><th>날짜</th><th>메뉴</th><th>배치</th><th class="r">생산량(g)</th><th>메모</th></tr></thead>
+          <tbody id="tb-pfull"><tr><td colspan="5" class="empty">로딩...</td></tr></tbody>
+        </table>
+      </div>
     </div>
+  </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script>
-        // Google Apps Script URL
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxgye70JFDlNUPNtokT2N60hqcor5Pl5ZomQvCoPu203OSnfb6HyItrn-Pqt-BeAIwj/exec';
+<!-- ════ UPLOAD ════ -->
+<div class="page" id="page-upload">
 
-        // 메뉴 레시피 데이터
-        const recipes = {
-            '바나나': { batch: 1759, milk: 1.5, cream: 277.5 },
-            '생크림밀크': { batch: 2461, milk: 1.5, cream: 755.4 },
-            '레몬요거트': { batch: 1826, milk: 1.5, cream: 277.5 },
-            '호지차한라봉': { batch: 1407, milk: 1.5, cream: 277.5 },
-            '아몬드': { batch: 1556, milk: 1.5, cream: 277.5 },
-            '말차': { batch: 1488, milk: 1.5, cream: 277.5 },
-            '딸기소르베': { batch: 1845, milk: 0, cream: 0 },
-            '초코': { batch: 2565, milk: 0, cream: 0 }
-        };
+  <div class="panel mb8">
+    <div class="panel-hd"><span class="panel-title">토스POS 엑셀/CSV 업로드</span></div>
+    <div class="panel-bd">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileIn').click()">
+        <div class="drop-icon">↑</div>
+        <div class="drop-title">파일을 드래그하거나 클릭하여 선택</div>
+        <div class="drop-sub">.xlsx · .xls · .csv 지원 | 컬럼: 날짜 / 메뉴(상품명) / 수량 / 금액</div>
+        <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" style="display:none" onchange="onFile(event)">
+      </div>
+    </div>
+  </div>
 
-        let selectedBatchCount = null;
+  <!-- Preview -->
+  <div class="panel mb8" id="previewPanel" style="display:none;">
+    <div class="panel-hd">
+      <span class="panel-title">미리보기</span>
+      <div class="row-btns">
+        <span style="font-size:12px;color:var(--t2);" id="prevCnt">0건</span>
+        <button class="btn btn-p" onclick="doUpload()">업로드</button>
+        <button class="btn btn-g" onclick="cancelPreview()">취소</button>
+      </div>
+    </div>
+    <div class="scroll" style="max-height:280px;">
+      <table class="tbl">
+        <thead><tr><th>날짜</th><th>메뉴</th><th class="r">수량</th><th class="r">금액</th></tr></thead>
+        <tbody id="tb-prev"></tbody>
+      </table>
+    </div>
+  </div>
 
-        // 동기화 상태 표시
-        function setSyncStatus(status, text) {
-            const statusEl = document.getElementById('syncStatus');
-            const textEl = document.getElementById('syncText');
-            statusEl.className = 'sync-status ' + status;
-            textEl.textContent = text;
-        }
+  <!-- Upload history -->
+  <div class="panel">
+    <div class="panel-hd"><span class="panel-title">업로드 이력</span></div>
+    <div class="scroll">
+      <table class="tbl">
+        <thead><tr><th>업로드일</th><th>파일명</th><th class="r">건수</th><th class="r">합계</th></tr></thead>
+        <tbody id="tb-uploads"><tr><td colspan="4" class="empty">로딩...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-        // API 호출
-        async function callAPI(action, method = 'GET', data = null) {
-            setSyncStatus('syncing', '동기화 중...');
-            try {
-                const url = method === 'GET' ? `${API_URL}?action=${action}` : API_URL;
-                const options = {
-                    method: method,
-                    mode: 'no-cors'
-                };
-                
-                if (method === 'POST' && data) {
-                    const formData = new URLSearchParams();
-                    formData.append('action', action);
-                    options.body = formData;
-                    
-                    // 실제로는 fetch로 POST를 보낼 수 없으므로 GET으로 변환
-                    const params = new URLSearchParams({
-                        action: action,
-                        data: JSON.stringify(data)
-                    });
-                    const response = await fetch(`${API_URL}?${params}`);
-                    const result = await response.json();
-                    setSyncStatus('', '동기화됨');
-                    return result;
-                }
-                
-                const response = await fetch(url);
-                const result = await response.json();
-                setSyncStatus('', '동기화됨');
-                return result;
-            } catch (error) {
-                console.error('API Error:', error);
-                setSyncStatus('error', '동기화 실패');
-                return null;
-            }
-        }
+<!-- ════ HISTORY ════ -->
+<div class="page" id="page-hist">
 
-        // 초기화
-        async function init() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('productionDate').value = today;
-            
-            await loadProductionHistory();
-            await loadSalesHistory();
-            await updateDashboard();
-        }
+  <div class="panel mb8">
+    <div class="panel-hd"><span class="panel-title">필터</span></div>
+    <div class="panel-bd" style="padding:10px 16px;">
+      <div class="filter-row">
+        <select class="inp" id="hType" onchange="loadHist()" style="width:110px;">
+          <option value="all">전체</option>
+          <option value="sale">판매</option>
+          <option value="prod">생산</option>
+        </select>
+        <select class="inp" id="hMenu" onchange="loadHist()" style="width:140px;">
+          <option value="">전체 메뉴</option>
+          <option>바나나</option><option>생크림밀크</option><option>레몬요거트</option>
+          <option>호지차한라봉</option><option>아몬드</option><option>말차</option>
+          <option>딸기소르베</option><option>초코</option>
+        </select>
+        <input type="date" class="inp" id="hFrom" onchange="loadHist()" style="width:155px;">
+        <span style="color:var(--t3);">~</span>
+        <input type="date" class="inp" id="hTo" onchange="loadHist()" style="width:155px;">
+        <button class="btn btn-g" onclick="resetHist()">초기화</button>
+      </div>
+    </div>
+  </div>
 
-        // 탭 전환
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                this.classList.add('active');
-                document.getElementById(this.dataset.tab).classList.add('active');
-            });
-        });
+  <div class="panel">
+    <div class="panel-hd">
+      <span class="panel-title">이력</span>
+      <span style="font-size:12px;color:var(--t3);" id="hCount">0건</span>
+    </div>
+    <div class="scroll" style="max-height:600px;">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>날짜</th><th>유형</th><th>메뉴</th>
+            <th class="r">수량/배치</th><th class="r">금액/생산량</th><th>메모</th>
+          </tr>
+        </thead>
+        <tbody id="tb-hist"><tr><td colspan="6" class="empty">로딩...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-        // 배치 선택
-        function selectBatch(count) {
-            selectedBatchCount = count;
-            document.querySelectorAll('.batch-option').forEach(opt => opt.classList.remove('selected'));
-            event.target.classList.add('selected');
-            document.getElementById('batchInput').value = count;
-        }
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
-        // 생산 모달
-        function openProductionModal() {
-            document.getElementById('productionModal').classList.add('active');
-        }
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ════ CONFIG ════════════════════════════════════════════════════════════════
+const API = 'https://script.google.com/macros/s/AKfycbxgye70JFDlNUPNtokT2N60hqcor5Pl5ZomQvCoPu203OSnfb6HyItrn-Pqt-BeAIwj/exec';
 
-        function closeProductionModal() {
-            document.getElementById('productionModal').classList.remove('active');
-            document.getElementById('menuSelect').value = '';
-            document.getElementById('batchInput').value = '';
-            document.getElementById('productionMemo').value = '';
-            selectedBatchCount = null;
-            document.querySelectorAll('.batch-option').forEach(opt => opt.classList.remove('selected'));
-        }
+const RECIPES = {
+  '바나나':      { out:1759, milk:1.5,  cream:277.5  },
+  '생크림밀크':  { out:2461, milk:1.5,  cream:755.4  },
+  '레몬요거트':  { out:1826, milk:1.5,  cream:277.5  },
+  '호지차한라봉':{ out:1407, milk:1.5,  cream:277.5  },
+  '아몬드':      { out:1556, milk:1.5,  cream:277.5  },
+  '말차':        { out:1488, milk:1.5,  cream:277.5  },
+  '딸기소르베':  { out:1845, milk:0,    cream:0      },
+  '초코':        { out:2565, milk:0,    cream:0      }
+};
 
-        // 생산 저장
-        async function saveProduction() {
-            const menu = document.getElementById('menuSelect').value;
-            const batch = parseInt(document.getElementById('batchInput').value) || selectedBatchCount;
-            const date = document.getElementById('productionDate').value;
-            const memo = document.getElementById('productionMemo').value;
+const MCOL = {
+  '바나나':'#fade2a','생크림밀크':'#5794f2','레몬요거트':'#73bf69',
+  '호지차한라봉':'#ff9830','아몬드':'#b877d9','말차':'#a0d898',
+  '딸기소르베':'#f2495c','초코':'#c67e3a'
+};
+const MBADGE = {
+  '바나나':'b-ban','생크림밀크':'b-mil','레몬요거트':'b-lem',
+  '호지차한라봉':'b-hoj','아몬드':'b-alm','말차':'b-mat',
+  '딸기소르베':'b-str','초코':'b-cho'
+};
 
-            if (!menu || !batch || !date) {
-                alert('메뉴, 배치 수, 날짜를 모두 입력해주세요');
-                return;
-            }
+const FIXED  = 6_000_000;
+const GOAL   = 26_667_000;
+const MARGIN = 0.60;
 
-            const recipe = recipes[menu];
-            const productionData = {
-                date: date,
-                menu: menu,
-                batch: batch,
-                amount: recipe.batch * batch,
-                milk: recipe.milk * batch,
-                cream: recipe.cream * batch,
-                memo: memo
-            };
+// ════ STATE ═════════════════════════════════════════════════════════════════
+let allProd = [], allSales = [];
+let selMenu = null, selBatch = null;
+let pendingSales = [], pendingFile = '';
+let charts = {};
 
-            // Google Sheets에 직접 추가
-            const url = `${API_URL}?action=addProduction&date=${encodeURIComponent(date)}&menu=${encodeURIComponent(menu)}&batch=${batch}&amount=${productionData.amount}&milk=${productionData.milk}&cream=${productionData.cream}&memo=${encodeURIComponent(memo)}`;
-            
-            try {
-                await fetch(url, { mode: 'no-cors' });
-                closeProductionModal();
-                alert('생산 기록이 저장되었습니다!');
-                setTimeout(() => loadProductionHistory(), 1000);
-            } catch (error) {
-                alert('저장 중 오류가 발생했습니다');
-            }
-        }
+// ════ CLOCK ═════════════════════════════════════════════════════════════════
+(function tickClock() {
+  const el = document.getElementById('clock');
+  function update() {
+    const d = new Date();
+    el.textContent = d.toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',
+      hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  update();
+  setInterval(update, 1000);
+})();
 
-        // 생산 이력 로드
-        async function loadProductionHistory() {
-            const container = document.getElementById('productionHistory');
-            
-            try {
-                const result = await callAPI('getProduction');
-                
-                if (!result || !result.data || result.data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📝</div>
-                            <p>아직 생산 기록이 없습니다</p>
-                        </div>
-                    `;
-                    return;
-                }
+// ════ CHART DEFAULTS ════════════════════════════════════════════════════════
+Chart.defaults.color        = '#9ca3af';
+Chart.defaults.borderColor  = '#2d3138';
+Chart.defaults.font.family  = 'Inter, sans-serif';
+Chart.defaults.font.size    = 12;
 
-                container.innerHTML = result.data
-                    .reverse()
-                    .slice(0, 20)
-                    .map(p => `
-                        <div class="history-item">
-                            <div>
-                                <div class="date">${p['날짜']}</div>
-                                <div class="content">${p['메뉴']} × ${p['배치수']}배치</div>
-                                ${p['메모'] ? `<div style="font-size: 12px; color: #666; margin-top: 5px;">${p['메모']}</div>` : ''}
-                            </div>
-                            <div class="amount">${parseFloat(p['생산량(g)']).toLocaleString()}g</div>
-                        </div>
-                    `).join('');
-            } catch (error) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠️</div>
-                        <p>데이터를 불러올 수 없습니다</p>
-                    </div>
-                `;
-            }
-        }
+// ════ NAV ════════════════════════════════════════════════════════════════════
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('page-' + tab.dataset.page).classList.add('active');
+  });
+});
 
-        // 판매 이력 로드
-        async function loadSalesHistory() {
-            const container = document.getElementById('salesHistory');
-            
-            try {
-                const result = await callAPI('getSales');
-                
-                if (!result || !result.data || result.data.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📊</div>
-                            <p>아직 판매 데이터가 없습니다</p>
-                        </div>
-                    `;
-                    return;
-                }
+// ════ API ════════════════════════════════════════════════════════════════════
+function setSync(state) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLbl');
+  dot.className = 'sync-dot' + (state === 'ok' ? '' : ' ' + state);
+  lbl.textContent = state === 'ok' ? '연결됨' : state === 'syncing' ? '동기화 중...' : '오류';
+}
 
-                // 파일별로 그룹화
-                const grouped = {};
-                result.data.forEach(row => {
-                    const fileName = row['파일명'];
-                    if (!grouped[fileName]) {
-                        grouped[fileName] = {
-                            uploadDate: row['업로드일'],
-                            items: [],
-                            total: 0
-                        };
-                    }
-                    grouped[fileName].items.push(row);
-                    grouped[fileName].total += parseFloat(row['금액']) || 0;
-                });
+async function api(params) {
+  setSync('syncing');
+  try {
+    const res  = await fetch(API + '?' + new URLSearchParams(params));
+    const text = await res.text();
+    const data = JSON.parse(text);
+    setSync('ok');
+    return data;
+  } catch (e) {
+    setSync('error');
+    console.error('API:', e);
+    return null;
+  }
+}
 
-                container.innerHTML = Object.entries(grouped)
-                    .map(([fileName, data]) => `
-                        <div class="history-item">
-                            <div>
-                                <div class="date">${data.uploadDate}</div>
-                                <div class="content">${fileName}</div>
-                                <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                                    ${data.items.length}건
-                                </div>
-                            </div>
-                            <div class="amount">${data.total.toLocaleString()}원</div>
-                        </div>
-                    `).join('');
-            } catch (error) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠️</div>
-                        <p>데이터를 불러올 수 없습니다</p>
-                    </div>
-                `;
-            }
-        }
+// ════ HELPERS ════════════════════════════════════════════════════════════════
+function fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('ko-KR');
+}
+function fmtW(n) {
+  if (!n) return '0';
+  if (n >= 10_000_000) return (n/10_000_000).toFixed(1)+'천만';
+  if (n >= 1_000_000)  return (n/1_000_000).toFixed(1)+'백만';
+  if (n >= 10_000)     return Math.round(n/10_000)+'만';
+  return fmt(n);
+}
+function badge(menu) {
+  return `<span class="badge ${MBADGE[menu]||''}">${menu||''}</span>`;
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+function thisMonth() { return today().slice(0,7); }
 
-        // 대시보드 업데이트
-        async function updateDashboard() {
-            try {
-                const result = await callAPI('getDashboard');
-                
-                if (result) {
-                    document.querySelector('#dashboard .stats-grid').innerHTML = `
-                        <div class="stat-card">
-                            <h3>총 생산량</h3>
-                            <div class="value">${(result.totalProduction / 1000).toFixed(1)}<span class="unit">kg</span></div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>총 판매액</h3>
-                            <div class="value">${(result.totalSales / 10000).toFixed(0)}<span class="unit">만원</span></div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>평균 마진</h3>
-                            <div class="value">73<span class="unit">%</span></div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>이번 달 생산</h3>
-                            <div class="value">${result.monthlyProduction}<span class="unit">회</span></div>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Dashboard update error:', error);
-            }
-        }
+// ════ DASHBOARD ══════════════════════════════════════════════════════════════
+async function loadDash() {
+  const [p, s] = await Promise.all([
+    api({action:'getProduction'}),
+    api({action:'getSales'})
+  ]);
+  if (p?.data) allProd  = p.data;
+  if (s?.data) allSales = s.data;
 
-        // 파일 업로드
-        const uploadArea = document.getElementById('uploadArea');
-        
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, e => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
+  const tm = thisMonth(), td = today();
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => {
-                uploadArea.classList.add('dragover');
-            });
-        });
+  // Monthly & today sales
+  const monthRows = allSales.filter(r => (r['판매일']||r['업로드일']||'').startsWith(tm));
+  const todayRows = allSales.filter(r => (r['판매일']||r['업로드일']||'').startsWith(td));
+  const ms  = monthRows.reduce((a,r) => a + (parseFloat(r['금액'])||0), 0);
+  const tds = todayRows.reduce((a,r) => a + (parseFloat(r['금액'])||0), 0);
+  const tdc = todayRows.length;
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => {
-                uploadArea.classList.remove('dragover');
-            });
-        });
+  // Profit & goal
+  const profit = ms * MARGIN - FIXED;
+  const goalPct = Math.min(Math.round(ms / GOAL * 100), 999);
 
-        uploadArea.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length > 0) handleFiles(files);
-        });
+  // This-month production
+  const mprod = allProd.filter(r => (r['날짜']||'').startsWith(tm));
+  const mprodB = mprod.reduce((a,r) => a+(parseInt(r['배치수'])||0), 0);
+  const totalG = allProd.reduce((a,r) => a+(parseFloat(r['생산량(g)'])||0), 0);
 
-        function handleFileUpload(event) {
-            handleFiles(event.target.files);
-        }
+  // KPI
+  set('k-ms',    fmtW(ms));
+  set('k-ms-sub', `${fmt(ms)}원  /  목표 ${fmtW(GOAL)}`);
 
-        async function handleFiles(files) {
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            const reader = new FileReader();
-            
-            reader.onload = async function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                    
-                    // Google Sheets에 업로드
-                    const uploadDate = new Date().toISOString().split('T')[0];
-                    const salesData = jsonData.map(row => ({
-                        date: row['날짜'] || row['date'] || uploadDate,
-                        menu: row['메뉴'] || row['상품명'] || row['menu'] || '',
-                        quantity: row['수량'] || row['quantity'] || 1,
-                        amount: row['금액'] || row['amount'] || 0
-                    }));
+  set('k-pr',    fmtW(Math.abs(profit)));
+  const pEl = document.getElementById('k-pr-sub');
+  pEl.textContent = profit < 0 ? `적자 ${fmtW(Math.abs(profit))}` : profit>=10_000_000 ? '목표 달성 ✓' : `목표까지 ${fmtW(10_000_000-profit)} 남음`;
+  pEl.className   = 'kpi-sub ' + (profit>=10_000_000?'up': profit<0?'down':'');
 
-                    // 각 행을 URL 파라미터로 전송 (간단한 방식)
-                    for (const sale of salesData.slice(0, 10)) { // 첫 10개만
-                        const url = `${API_URL}?action=addSales&uploadDate=${uploadDate}&fileName=${encodeURIComponent(file.name)}&date=${encodeURIComponent(sale.date)}&menu=${encodeURIComponent(sale.menu)}&quantity=${sale.quantity}&amount=${sale.amount}`;
-                        await fetch(url, { mode: 'no-cors' });
-                    }
-                    
-                    alert('판매 데이터가 업로드되었습니다!');
-                    setTimeout(() => loadSalesHistory(), 1000);
-                } catch (error) {
-                    alert('파일 처리 중 오류가 발생했습니다: ' + error.message);
-                }
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
+  set('k-gp',    goalPct);
+  const bar = document.getElementById('k-gp-bar');
+  bar.style.width = Math.min(goalPct,100)+'%';
+  bar.className   = 'prog-fill' + (goalPct>=100?' ok':'');
+  set('k-gp-sub', `${goalPct}%  달성  (${tm})`);
 
-        // 초기화
-        init();
-    </script>
+  set('k-td',    tdc);
+  set('k-td-sub', fmt(tds)+'원');
+
+  set('k-bp',    mprodB);
+  set('k-bp-sub', `누적 ${Math.round(totalG/1000)}kg`);
+
+  // Tables & charts
+  renderRProd(allProd);
+  renderRSale(allSales);
+  drawTrend();
+  drawMix(monthRows);
+  drawMonthly(allSales);
+}
+
+function set(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function renderRProd(data) {
+  const rows = [...data].reverse().slice(0,10);
+  document.getElementById('tb-rprod').innerHTML = rows.length
+    ? rows.map(r => `<tr>
+        <td>${r['날짜']||''}</td>
+        <td>${badge(r['메뉴'])}</td>
+        <td>${r['배치수']||''}배치</td>
+        <td class="r">${fmt(parseFloat(r['생산량(g)']))}g</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty">생산 기록 없음</td></tr>';
+}
+
+function renderRSale(data) {
+  const rows = [...data].reverse().slice(0,10);
+  document.getElementById('tb-rsale').innerHTML = rows.length
+    ? rows.map(r => `<tr>
+        <td>${r['판매일']||r['업로드일']||''}</td>
+        <td>${badge(r['메뉴'])}</td>
+        <td class="r">${r['수량']||1}</td>
+        <td class="r">${fmt(parseFloat(r['금액']))}원</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty">판매 기록 없음</td></tr>';
+}
+
+// ════ CHARTS ═════════════════════════════════════════════════════════════════
+function drawTrend() {
+  const days = parseInt(document.getElementById('trend-days').value||30);
+  const daily = {};
+  const now   = new Date();
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(now.getDate()-i);
+    daily[d.toISOString().split('T')[0]] = 0;
+  }
+  allSales.forEach(r => {
+    const d = (r['판매일']||r['업로드일']||'').slice(0,10);
+    if (d in daily) daily[d] += parseFloat(r['금액'])||0;
+  });
+
+  const labels = Object.keys(daily).map(d => d.slice(5));
+  const vals   = Object.values(daily);
+
+  if (charts.trend) charts.trend.destroy();
+  charts.trend = new Chart(document.getElementById('cTrend'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: vals, borderColor:'#5794f2',
+        backgroundColor:'rgba(87,148,242,.07)',
+        borderWidth:2, pointRadius:2, tension:.3, fill:true
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{color:'#2d3138'}, ticks:{maxTicksLimit:10} },
+        y:{ grid:{color:'#2d3138'}, ticks:{ callback: v => v>=10000?Math.round(v/10000)+'만':fmt(v) } }
+      }
+    }
+  });
+}
+
+function drawMix(rows) {
+  const counts = {};
+  rows.forEach(r => {
+    const m = r['메뉴']||'기타';
+    counts[m] = (counts[m]||0) + (parseFloat(r['수량'])||1);
+  });
+  const labels = Object.keys(counts), vals = Object.values(counts);
+
+  if (charts.mix) charts.mix.destroy();
+  const ctx = document.getElementById('cMix').getContext('2d');
+
+  if (!labels.length) {
+    ctx.fillStyle='#6b7280'; ctx.font='13px Inter'; ctx.textAlign='center';
+    ctx.fillText('이번달 판매 데이터 없음', 110, 110); return;
+  }
+  charts.mix = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels,
+      datasets:[{ data:vals, backgroundColor:labels.map(l=>MCOL[l]||'#6b7280'), borderWidth:1, borderColor:'#181b1f' }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'right', labels:{ boxWidth:11, padding:8 } } }
+    }
+  });
+}
+
+function drawMonthly(sales) {
+  const months = {};
+  const now = new Date();
+  for (let i=5;i>=0;i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const k = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    months[k] = 0;
+  }
+  sales.forEach(r => {
+    const d = (r['판매일']||r['업로드일']||'').slice(0,7).replace('-','.');
+    if (d in months) months[d] += parseFloat(r['금액'])||0;
+  });
+  const labels = Object.keys(months), vals = Object.values(months);
+
+  if (charts.monthly) charts.monthly.destroy();
+  charts.monthly = new Chart(document.getElementById('cMonth'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        { label:'실 매출', data:vals, backgroundColor:'rgba(87,148,242,.65)', borderRadius:2 },
+        { label:'목표', data:Array(labels.length).fill(GOAL), type:'line',
+          borderColor:'#ff9830', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ boxWidth:11 } } },
+      scales:{
+        x:{ grid:{color:'#2d3138'} },
+        y:{ grid:{color:'#2d3138'}, ticks:{ callback: v=>Math.round(v/10000)+'만' } }
+      }
+    }
+  });
+}
+
+// ════ PRODUCTION FORM ════════════════════════════════════════════════════════
+function pickMenu(el) {
+  document.querySelectorAll('[data-m]').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  selMenu = el.dataset.m;
+  updatePrev();
+}
+function pickBatch(el, n) {
+  document.querySelectorAll('#page-prod .sel-btn:not([data-m])').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  selBatch = n;
+  document.getElementById('batchIn').value = '';
+  updatePrev();
+}
+function onBatchIn() {
+  document.querySelectorAll('#page-prod .sel-btn:not([data-m])').forEach(b=>b.classList.remove('on'));
+  selBatch = parseInt(document.getElementById('batchIn').value)||null;
+  updatePrev();
+}
+function updatePrev() {
+  const box = document.getElementById('prodPrev');
+  if (selMenu && selBatch) {
+    const r = RECIPES[selMenu];
+    const g = r.out * selBatch;
+    box.style.display = 'block';
+    document.getElementById('prevVal').textContent = fmt(g) + 'g';
+    document.getElementById('prevSub').textContent =
+      `약 ${Math.floor(g/120)}인분  |  우유 ${r.milk*selBatch}L  |  생크림 ${r.cream*selBatch}ml`;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+async function saveProd() {
+  if (!selMenu)  { showToast('메뉴를 선택하세요','err'); return; }
+  if (!selBatch) { showToast('배치 수를 입력하세요','err'); return; }
+  const date = document.getElementById('prodDate').value;
+  const memo = document.getElementById('prodMemo').value;
+  const r = RECIPES[selMenu];
+  const res = await api({
+    action:'addProduction', date, menu:selMenu, batch:selBatch,
+    amount: r.out*selBatch, milk: r.milk*selBatch, cream: r.cream*selBatch, memo: memo||''
+  });
+  if (res?.success) {
+    showToast(`${selMenu} ${selBatch}배치 등록 완료`);
+    resetProdForm();
+    allProd = (await api({action:'getProduction'}))?.data || allProd;
+    renderProdFull();
+    renderRProd(allProd);
+  } else {
+    showToast('저장 실패. 다시 시도하세요.','err');
+  }
+}
+
+function resetProdForm() {
+  selMenu = selBatch = null;
+  document.querySelectorAll('[data-m],.sel-btn:not([data-m])').forEach(b=>b.classList.remove('on'));
+  document.getElementById('batchIn').value = '';
+  document.getElementById('prodMemo').value = '';
+  document.getElementById('prodPrev').style.display = 'none';
+}
+
+async function renderProdFull() {
+  const rows = [...allProd].reverse();
+  document.getElementById('tb-pfull').innerHTML = rows.length
+    ? rows.map(r=>`<tr>
+        <td>${r['날짜']||''}</td>
+        <td>${badge(r['메뉴'])}</td>
+        <td>${r['배치수']||''}배치</td>
+        <td class="r">${fmt(parseFloat(r['생산량(g)']))}g</td>
+        <td style="color:var(--t3);font-size:12px;">${r['메모']||''}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" class="empty">생산 기록 없음</td></tr>';
+}
+
+// ════ SALES UPLOAD ════════════════════════════════════════════════════════════
+const dz = document.getElementById('dropZone');
+['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('over');}));
+['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('over');}));
+dz.addEventListener('drop', ev=>handleFiles(ev.dataTransfer.files));
+
+function onFile(ev) { handleFiles(ev.target.files); }
+
+function handleFiles(files) {
+  if (!files.length) return;
+  pendingFile = files[0].name;
+  const reader = new FileReader();
+  reader.onload = e => parseXlsx(e.target.result);
+  reader.readAsArrayBuffer(files[0]);
+}
+
+function parseXlsx(buf) {
+  try {
+    const wb = XLSX.read(new Uint8Array(buf), {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(ws, {defval:''});
+    pendingSales = json.map(row => ({
+      date:   String(row['날짜']||row['판매일']||row['date']||today()).slice(0,10),
+      menu:   String(row['메뉴']||row['상품명']||row['menu']||''),
+      qty:    parseInt(row['수량']||row['quantity']||row['qty']||1),
+      amount: parseFloat(row['금액']||row['매출']||row['amount']||0)
+    })).filter(r => r.menu);
+    showPreview();
+  } catch(e) { showToast('파일 파싱 오류: '+e.message,'err'); }
+}
+
+function showPreview() {
+  document.getElementById('previewPanel').style.display = 'block';
+  document.getElementById('prevCnt').textContent = pendingSales.length+'건';
+  const tbody = document.getElementById('tb-prev');
+  tbody.innerHTML = pendingSales.slice(0,50).map(r=>`<tr>
+    <td>${r.date}</td><td>${badge(r.menu)}</td>
+    <td class="r">${r.qty}</td><td class="r">${fmt(r.amount)}원</td>
+  </tr>`).join('');
+  if (pendingSales.length>50)
+    tbody.innerHTML += `<tr><td colspan="4" class="empty" style="padding:6px;">… 외 ${pendingSales.length-50}건</td></tr>`;
+}
+
+function cancelPreview() {
+  pendingSales=[]; pendingFile='';
+  document.getElementById('previewPanel').style.display='none';
+  document.getElementById('fileIn').value='';
+}
+
+async function doUpload() {
+  if (!pendingSales.length) return;
+  const uploadDate = today();
+  const CHUNK = 30;
+  let sent = 0;
+  for (let i=0; i<pendingSales.length; i+=CHUNK) {
+    const chunk = pendingSales.slice(i, i+CHUNK);
+    const res = await api({
+      action:'addSaleBatch', uploadDate, fileName:pendingFile,
+      data: JSON.stringify(chunk)
+    });
+    if (res?.success) sent += res.count||chunk.length;
+  }
+  if (sent > 0) {
+    showToast(`${sent}건 업로드 완료`);
+    cancelPreview();
+    allSales = (await api({action:'getSales'}))?.data || allSales;
+    renderUploads();
+    renderRSale(allSales);
+    drawMix(allSales.filter(r=>(r['판매일']||r['업로드일']||'').startsWith(thisMonth())));
+    drawTrend();
+  } else {
+    showToast('업로드 실패','err');
+  }
+}
+
+function renderUploads() {
+  const groups = {};
+  allSales.forEach(r => {
+    const k = (r['업로드일']||'')+'\x00'+(r['파일명']||'');
+    if (!groups[k]) groups[k] = {date:r['업로드일'],name:r['파일명'],cnt:0,total:0};
+    groups[k].cnt++;
+    groups[k].total += parseFloat(r['금액'])||0;
+  });
+  const rows = Object.values(groups).reverse().slice(0,20);
+  document.getElementById('tb-uploads').innerHTML = rows.length
+    ? rows.map(r=>`<tr>
+        <td>${r.date}</td>
+        <td style="font-size:12px;color:var(--t2);">${r.name}</td>
+        <td class="r">${r.cnt}건</td>
+        <td class="r">${fmt(r.total)}원</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty">업로드 이력 없음</td></tr>';
+}
+
+// ════ HISTORY ════════════════════════════════════════════════════════════════
+function loadHist() {
+  const type = document.getElementById('hType').value;
+  const menu = document.getElementById('hMenu').value;
+  const from = document.getElementById('hFrom').value;
+  const to   = document.getElementById('hTo').value;
+  let rows = [];
+
+  if (type !== 'prod') {
+    allSales.forEach(r => {
+      const d = (r['판매일']||r['업로드일']||'').slice(0,10);
+      if (menu && r['메뉴']!==menu) return;
+      if (from && d<from) return;
+      if (to   && d>to)   return;
+      rows.push({date:d, type:'판매', menu:r['메뉴']||'', qty:r['수량']||1,
+        val:fmt(parseFloat(r['금액']))+'원', memo:''});
+    });
+  }
+  if (type !== 'sale') {
+    allProd.forEach(r => {
+      const d = (r['날짜']||'').slice(0,10);
+      if (menu && r['메뉴']!==menu) return;
+      if (from && d<from) return;
+      if (to   && d>to)   return;
+      rows.push({date:d, type:'생산', menu:r['메뉴']||'',
+        qty:(r['배치수']||'')+'배치', val:fmt(parseFloat(r['생산량(g)']))+'g', memo:r['메모']||''});
+    });
+  }
+  rows.sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('hCount').textContent = rows.length+'건';
+  document.getElementById('tb-hist').innerHTML = rows.length
+    ? rows.map(r=>`<tr>
+        <td>${r.date}</td>
+        <td><span class="badge ${r.type==='판매'?'b-sale':'b-prod'}">${r.type}</span></td>
+        <td>${badge(r.menu)}</td>
+        <td class="r">${r.qty}</td>
+        <td class="r">${r.val}</td>
+        <td style="color:var(--t3);font-size:12px;">${r.memo}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="empty">해당 조건의 기록 없음</td></tr>';
+}
+
+function resetHist() {
+  document.getElementById('hType').value='all';
+  document.getElementById('hMenu').value='';
+  document.getElementById('hFrom').value='';
+  document.getElementById('hTo').value='';
+  loadHist();
+}
+
+// ════ TOAST ══════════════════════════════════════════════════════════════════
+function showToast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+// ════ REFRESH ALL ═══════════════════════════════════════════════════════════
+async function refreshAll() {
+  await loadDash();
+  renderProdFull();
+  renderUploads();
+  loadHist();
+}
+
+// ════ INIT ═══════════════════════════════════════════════════════════════════
+async function init() {
+  document.getElementById('prodDate').value = today();
+  const mn = new Date(); mn.setDate(1);
+  document.getElementById('hFrom').value = mn.toISOString().split('T')[0];
+  document.getElementById('hTo').value   = today();
+
+  await loadDash();
+  renderProdFull();
+  renderUploads();
+  loadHist();
+
+  // Auto-refresh every 5 min
+  setInterval(refreshAll, 300_000);
+}
+
+init();
+</script>
 </body>
 </html>
