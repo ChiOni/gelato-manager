@@ -516,7 +516,7 @@ const DEFAULT_RECIPES = [
 ];
 
 // ════ RECIPE STORAGE ════════════════════════════════════════════════════════
-function loadRecipes() {
+function loadRecipesLocal() {
   try {
     const s = localStorage.getItem('gelato_recipes');
     return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_RECIPES));
@@ -524,8 +524,27 @@ function loadRecipes() {
     return JSON.parse(JSON.stringify(DEFAULT_RECIPES));
   }
 }
+
+async function loadRecipesFromAPI() {
+  const res = await api({action: 'getRecipes'});
+  if (res?.recipes) {
+    try {
+      recipes = JSON.parse(res.recipes);
+      localStorage.setItem('gelato_recipes', res.recipes);
+      return true;
+    } catch(e) {}
+  }
+  return false;
+}
+
 function persistRecipes() {
-  localStorage.setItem('gelato_recipes', JSON.stringify(recipes));
+  const json = JSON.stringify(recipes);
+  localStorage.setItem('gelato_recipes', json);
+  // 구글 시트에 비동기 저장 (fire & forget)
+  fetch(API, {
+    method: 'POST',
+    body: new URLSearchParams({action: 'saveRecipes', data: json})
+  }).catch(() => {});
 }
 
 // ════ STATE ═════════════════════════════════════════════════════════════════
@@ -1014,7 +1033,18 @@ async function refreshAll() {
 
 async function init() {
   document.getElementById('prodDate').value = today();
+
+  // 1) localStorage에서 즉시 로드 (빠른 첫 렌더)
+  recipes = loadRecipesLocal();
   renderProdRecipes();
+
+  // 2) API에서 최신 레시피 가져오기 (다기기 동기화)
+  const fetched = await loadRecipesFromAPI();
+  if (fetched) {
+    renderProdRecipes();
+    if (editingIdx >= 0) renderRecipeList();
+  }
+
   await loadDash();
   renderProdFull();
   setInterval(refreshAll, 300_000);
