@@ -113,6 +113,15 @@ tr:last-child td{border-bottom:none}
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.url-link{color:var(--accent);text-decoration:none;font-size:12px}
+.url-link:hover{text-decoration:underline}
+/* copy modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px;min-width:280px}
+.modal-box h4{margin-bottom:16px;font-size:14px}
+.modal-select{width:100%;background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px;font-size:13px;margin-bottom:16px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -120,7 +129,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 <!-- ── 네비 ──────────────────────────────────────── -->
 <nav class="nav">
   <button class="nav-btn active" onclick="switchTab('dash')">대시보드</button>
-  <button class="nav-btn" onclick="switchTab('prod')">생산 등록</button>
+  <button class="nav-btn" onclick="switchTab('prod')">생산 관리</button>
   <button class="nav-btn" onclick="switchTab('recipe')">레시피 관리</button>
   <button class="nav-btn" onclick="switchTab('ingr')">재료 관리</button>
 </nav>
@@ -129,6 +138,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
      탭 1: 대시보드
 ════════════════════════════════════════════════ -->
 <div id="tab-dash" class="tab active">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <span id="dashStatus" style="font-size:12px;color:var(--muted)">로드 중…</span>
+    <button class="btn btn-ghost btn-sm" onclick="loadDash()">↻ 새로고침</button>
+  </div>
   <div class="stats">
     <div class="stat"><div class="stat-label">이번달 매출</div><div class="stat-value" id="s-monthly">—</div></div>
     <div class="stat"><div class="stat-label">오늘 매출</div><div class="stat-value green" id="s-today">—</div></div>
@@ -146,6 +159,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       <canvas id="chartMenu" height="200"></canvas>
     </div>
   </div>
+  <div class="card">
+    <div class="card-title">최근 판매 이력</div>
+    <div id="dashSalesHistory"><div class="empty">로드 중…</div></div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════
@@ -153,9 +170,9 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 ════════════════════════════════════════════════ -->
 <div id="tab-prod" class="tab">
 
-  <!-- Step 1: 옵션 선택 -->
+  <!-- Step 1: 맛 선택 -->
   <div class="step-box">
-    <div class="step-label">Step 1 — 옵션 선택</div>
+    <div class="step-label">Step 1 — 맛 선택</div>
     <div class="option-grid" id="prodOptionGrid"></div>
   </div>
 
@@ -194,7 +211,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
     <!-- 좌: 옵션 사이드바 -->
     <div>
       <div class="section-hdr">
-        <h3>옵션</h3>
+        <h3>맛</h3>
         <button class="btn btn-ghost btn-sm" onclick="addOption()">+ 추가</button>
       </div>
       <div class="option-sidebar" id="optionSidebar"></div>
@@ -216,12 +233,24 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       <button class="btn btn-ghost btn-sm" onclick="addIngredient()">+ 재료 추가</button>
     </div>
     <table>
-      <thead><tr><th>이름</th><th>단위</th><th>단가 (원/단위)</th><th></th></tr></thead>
+      <thead><tr><th>이름</th><th>단위</th><th>단가 (원/단위)</th><th>구매처 링크</th><th></th></tr></thead>
       <tbody id="ingrTableBody"></tbody>
     </table>
   </div>
   <div class="row-btns">
     <button class="btn btn-primary" onclick="saveAll()">저장</button>
+  </div>
+</div>
+
+<!-- copy modal -->
+<div class="modal-overlay" id="copyModal">
+  <div class="modal-box">
+    <h4>레시피 복사 — 어느 맛으로?</h4>
+    <select class="modal-select" id="copyTargetSelect"></select>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeCopyModal()">취소</button>
+      <button class="btn btn-primary" onclick="confirmCopy()">복사</button>
+    </div>
   </div>
 </div>
 
@@ -237,23 +266,23 @@ const LS_KEY = 'gelato_metadata_v3';
 
 const DEFAULT_METADATA = {
   ingredients: [
-    {id:'i01', name:'우유',            unit:'g', price:1.483},
-    {id:'i02', name:'생크림 35%',      unit:'g', price:12.5},
-    {id:'i03', name:'탈지분유',        unit:'g', price:6.85},
-    {id:'i04', name:'설탕',            unit:'g', price:1.333},
-    {id:'i05', name:'포도당',          unit:'g', price:1.8},
-    {id:'i06', name:'덱스트로스',      unit:'g', price:3.976},
-    {id:'i07', name:'안정제',          unit:'g', price:10.5},
-    {id:'i08', name:'바나나',          unit:'g', price:10.0},
-    {id:'i09', name:'요거트 파우더',   unit:'g', price:9.0},
-    {id:'i10', name:'레몬청',          unit:'g', price:9.0},
-    {id:'i11', name:'호지차',          unit:'g', price:100.0},
-    {id:'i12', name:'한라봉필',        unit:'g', price:9.167},
-    {id:'i13', name:'아몬드 페이스트', unit:'g', price:31.25},
-    {id:'i14', name:'말차',            unit:'g', price:30.0},
-    {id:'i15', name:'딸기',            unit:'g', price:9.333},
-    {id:'i16', name:'초코 베이스',     unit:'g', price:8.421},
-    {id:'i17', name:'추가 재료(초코)', unit:'식', price:993.0},
+    {id:'i01', name:'우유',            unit:'g', price:1.483,  url:''},
+    {id:'i02', name:'생크림 35%',      unit:'g', price:12.5,   url:''},
+    {id:'i03', name:'탈지분유',        unit:'g', price:6.85,   url:''},
+    {id:'i04', name:'설탕',            unit:'g', price:1.333,  url:''},
+    {id:'i05', name:'포도당',          unit:'g', price:1.8,    url:''},
+    {id:'i06', name:'덱스트로스',      unit:'g', price:3.976,  url:''},
+    {id:'i07', name:'안정제',          unit:'g', price:10.5,   url:''},
+    {id:'i08', name:'바나나',          unit:'g', price:10.0,   url:''},
+    {id:'i09', name:'요거트 파우더',   unit:'g', price:9.0,    url:''},
+    {id:'i10', name:'레몬청',          unit:'g', price:9.0,    url:''},
+    {id:'i11', name:'호지차',          unit:'g', price:100.0,  url:''},
+    {id:'i12', name:'한라봉필',        unit:'g', price:9.167,  url:''},
+    {id:'i13', name:'아몬드 페이스트', unit:'g', price:31.25,  url:''},
+    {id:'i14', name:'말차',            unit:'g', price:30.0,   url:''},
+    {id:'i15', name:'딸기',            unit:'g', price:9.333,  url:''},
+    {id:'i16', name:'초코 베이스',     unit:'g', price:8.421,  url:''},
+    {id:'i17', name:'추가 재료(초코)', unit:'식', price:993.0,  url:''},
   ],
   options: [
     {id:'o01', name:'바나나',       color:'#fade2a'},
@@ -373,9 +402,17 @@ function showToast(msg) {
 // 탭 1: 대시보드
 // ═══════════════════════════════════════════════════════════
 async function loadDash() {
+  const statusEl = document.getElementById('dashStatus');
+  if (statusEl) statusEl.textContent = '로드 중…';
   try {
-    const res = await fetch(API + '?action=getDashboard');
-    const d   = await res.json();
+    const [dashRes, salesRes] = await Promise.all([
+      fetch(API + '?action=getDashboard'),
+      fetch(API + '?action=getSales')
+    ]);
+    const d = await dashRes.json();
+    const s = await salesRes.json();
+
+    if (d.error) throw new Error(d.error);
 
     document.getElementById('s-monthly').textContent = fmt(d.monthlySales  || 0);
     document.getElementById('s-today').textContent   = fmt(d.todaySales    || 0);
@@ -385,7 +422,38 @@ async function loadDash() {
 
     renderChartMonthly(d.monthlySalesByMonth || {});
     renderChartMenu(d.menuSummary || {});
-  } catch(e) { console.error('대시보드 로드 실패', e); }
+
+    // 최근 판매 이력
+    const salesData = (s.data || []).reverse().slice(0, 30);
+    const histEl = document.getElementById('dashSalesHistory');
+    if (histEl) {
+      if (!salesData.length) {
+        histEl.innerHTML = '<div class="empty">판매 데이터가 없습니다. 구글 시트의 판매기록 또는 상품주문상세내역 탭을 확인하세요.</div>';
+      } else {
+        histEl.innerHTML = `
+          <table>
+            <thead><tr><th>날짜</th><th>메뉴</th><th>수량</th><th style="text-align:right">금액</th></tr></thead>
+            <tbody>
+              ${salesData.map(r => `
+                <tr>
+                  <td style="color:var(--muted)">${String(r['판매일']||r['업로드일']||'').slice(0,10)}</td>
+                  <td>${r['메뉴']||''}</td>
+                  <td style="text-align:center">${r['수량']||''}</td>
+                  <td style="text-align:right;color:var(--green)">${Math.round(r['금액']||0).toLocaleString()}원</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+      }
+    }
+
+    const now = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+    if (statusEl) statusEl.textContent = `마지막 업데이트: ${now}`;
+  } catch(e) {
+    console.error('대시보드 로드 실패', e);
+    if (statusEl) statusEl.innerHTML = `<span style="color:var(--red)">연결 실패 — Apps Script 재배포 여부를 확인하세요.</span>`;
+    const histEl = document.getElementById('dashSalesHistory');
+    if (histEl) histEl.innerHTML = '<div class="empty">데이터를 불러올 수 없습니다.</div>';
+  }
 }
 
 function renderChartMonthly(byMonth) {
@@ -548,7 +616,7 @@ async function loadProdHistory() {
     if (!data.length) { el.innerHTML = '<div class="empty">생산 이력이 없습니다.</div>'; return; }
     el.innerHTML = `
       <table>
-        <thead><tr><th>생산시각</th><th>옵션</th><th>레시피</th><th style="text-align:center">배치수</th></tr></thead>
+        <thead><tr><th>생산시각</th><th>맛</th><th>레시피</th><th style="text-align:center">배치수</th></tr></thead>
         <tbody>
           ${data.map(r => `
             <tr>
@@ -587,7 +655,7 @@ function renderOptionSidebar() {
   });
   const addBtn = document.createElement('div');
   addBtn.className = 'sidebar-add';
-  addBtn.textContent = '+ 옵션 추가';
+  addBtn.textContent = '+ 맛 추가';
   addBtn.onclick = addOption;
   sidebar.appendChild(addBtn);
 }
@@ -595,7 +663,7 @@ function renderOptionSidebar() {
 function renderRecipeEditor() {
   const wrap = document.getElementById('recipeEditorWrap');
   if (!editingOptionId) {
-    wrap.innerHTML = '<div class="empty">좌측에서 옵션을 선택하세요.</div>';
+    wrap.innerHTML = '<div class="empty">좌측에서 맛을 선택하세요.</div>';
     return;
   }
   const opt     = getOpt(editingOptionId);
@@ -653,7 +721,10 @@ function renderRecipeCard(recipe) {
               onchange="updateRecipeYield('${recipe.id}',this.value)"> g
           </div>
         </div>
-        <button class="btn btn-danger btn-sm" onclick="deleteRecipe('${recipe.id}')">삭제</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="openCopyModal('${recipe.id}')">복사</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecipe('${recipe.id}')">삭제</button>
+        </div>
       </div>
       ${ingRows}
       <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addIngredientToRecipe('${recipe.id}')">+ 재료 추가</button>
@@ -673,7 +744,7 @@ function updateOptionColor(val) {
   if (opt) { opt.color = val; persistMeta(); renderOptionSidebar(); }
 }
 function addOption() {
-  const name = prompt('새 옵션 이름:');
+  const name = prompt('새 맛 이름:');
   if (!name) return;
   const o = { id: 'o' + uid(), name, color: '#5794f2' };
   META.options.push(o);
@@ -681,7 +752,7 @@ function addOption() {
   persistMeta(); renderRecipeTab();
 }
 function deleteOption(id) {
-  if (!confirm('옵션과 연결된 레시피도 모두 삭제됩니다. 계속하시겠습니까?')) return;
+  if (!confirm('이 맛과 연결된 레시피도 모두 삭제됩니다. 계속하시겠습니까?')) return;
   META.options = META.options.filter(o => o.id !== id);
   META.recipes = META.recipes.filter(r => r.optionId !== id);
   if (editingOptionId === id) editingOptionId = META.options[0]?.id || null;
@@ -696,6 +767,47 @@ function deleteRecipe(id) {
   if (!confirm('레시피를 삭제하시겠습니까?')) return;
   META.recipes = META.recipes.filter(r => r.id !== id);
   persistMeta(); renderRecipeEditor();
+}
+
+let copyingRecipeId = null;
+function openCopyModal(recipeId) {
+  copyingRecipeId = recipeId;
+  const sel = document.getElementById('copyTargetSelect');
+  sel.innerHTML = META.options.map(o =>
+    `<option value="${o.id}">${o.name}</option>`
+  ).join('');
+  // 기본 선택: 현재 맛 이외 첫 번째, 없으면 현재 맛
+  const src = getRecipe(recipeId);
+  const other = META.options.find(o => o.id !== (src && src.optionId));
+  if (other) sel.value = other.id;
+  document.getElementById('copyModal').classList.add('show');
+}
+function closeCopyModal() {
+  document.getElementById('copyModal').classList.remove('show');
+  copyingRecipeId = null;
+}
+function confirmCopy() {
+  const src = getRecipe(copyingRecipeId);
+  if (!src) { closeCopyModal(); return; }
+  const targetId = document.getElementById('copyTargetSelect').value;
+  const target   = META.options.find(o => o.id === targetId);
+  if (!target) { closeCopyModal(); return; }
+
+  const newRecipe = {
+    id: 'r' + uid(),
+    optionId: targetId,
+    name: src.name + ' (복사본)',
+    yieldPerBatch: src.yieldPerBatch,
+    ingredients: JSON.parse(JSON.stringify(src.ingredients))
+  };
+  META.recipes.push(newRecipe);
+  persistMeta();
+  closeCopyModal();
+
+  // 복사 대상 맛으로 이동
+  editingOptionId = targetId;
+  renderRecipeTab();
+  showToast(`"${src.name}"을 ${target.name}으로 복사했습니다.`);
 }
 function updateRecipeName(id, val) {
   const r = getRecipe(id);
@@ -740,18 +852,32 @@ function refreshRecipeCost(recipeId) {
 // ═══════════════════════════════════════════════════════════
 function renderIngrTable() {
   document.getElementById('ingrTableBody').innerHTML =
-    META.ingredients.map((ing, idx) => `
-      <tr>
-        <td><input class="cell-input" value="${ing.name}" onchange="META.ingredients[${idx}].name=this.value"></td>
-        <td><input class="cell-input" value="${ing.unit}" onchange="META.ingredients[${idx}].unit=this.value" style="width:60px"></td>
-        <td><input class="cell-input" type="number" value="${ing.price}" step="any" min="0"
-              onchange="META.ingredients[${idx}].price=parseFloat(this.value)||0" style="width:120px"></td>
-        <td><button class="btn btn-ghost btn-sm" onclick="deleteIngredient(${idx})">✕</button></td>
-      </tr>`).join('');
+    META.ingredients.map((ing, idx) => {
+      const url = ing.url || '';
+      const linkIcon = url
+        ? `<a href="${url}" target="_blank" rel="noopener" class="url-link" title="${url}">🔗 링크</a>`
+        : '';
+      return `
+        <tr>
+          <td><input class="cell-input" value="${ing.name}" onchange="META.ingredients[${idx}].name=this.value"></td>
+          <td><input class="cell-input" value="${ing.unit}" onchange="META.ingredients[${idx}].unit=this.value" style="width:60px"></td>
+          <td><input class="cell-input" type="number" value="${ing.price}" step="any" min="0"
+                onchange="META.ingredients[${idx}].price=parseFloat(this.value)||0" style="width:120px"></td>
+          <td style="min-width:220px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="cell-input" type="url" value="${url}" placeholder="https://…"
+                onchange="META.ingredients[${idx}].url=this.value;renderIngrTable()"
+                style="flex:1;font-size:12px">
+              ${linkIcon}
+            </div>
+          </td>
+          <td><button class="btn btn-ghost btn-sm" onclick="deleteIngredient(${idx})">✕</button></td>
+        </tr>`;
+    }).join('');
 }
 
 function addIngredient() {
-  META.ingredients.push({ id: 'i' + uid(), name: '새 재료', unit: 'g', price: 0 });
+  META.ingredients.push({ id: 'i' + uid(), name: '새 재료', unit: 'g', price: 0, url: '' });
   renderIngrTable();
 }
 function deleteIngredient(idx) {
