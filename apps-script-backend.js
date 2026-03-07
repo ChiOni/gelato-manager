@@ -28,6 +28,7 @@ function doGet(e) {
       case 'getDashboard':      result = getDashboard();         break;
       case 'addProduction':     result = addProduction(p);       break;
       case 'updateProduction':  result = updateProduction(p);    break;
+      case 'deleteProduction':  result = deleteProduction(p);    break;
       case 'listBackups':       result = listBackups();          break;
       default:
         result = { error: 'Invalid action: ' + p.action };
@@ -170,8 +171,18 @@ function updateProduction(p) {
   const sheet = getProductionSheet();
   const row   = parseInt(p.row);
   if (!row || row < 2) return { error: 'Invalid row: ' + p.row };
-  if (!p.time) return { error: 'Missing time' };
-  sheet.getRange(row, 1).setValue(_toKstStr(p.time));
+  if (p.time)    sheet.getRange(row, 1).setValue(_toKstStr(p.time));
+  if (p.option !== undefined)  sheet.getRange(row, 2).setValue(p.option);
+  if (p.recipe !== undefined)  sheet.getRange(row, 3).setValue(p.recipe);
+  if (p.batches !== undefined) sheet.getRange(row, 4).setValue(parseInt(p.batches) || 1);
+  return { success: true };
+}
+
+function deleteProduction(p) {
+  const sheet = getProductionSheet();
+  const row   = parseInt(p.row);
+  if (!row || row < 2) return { error: 'Invalid row: ' + p.row };
+  sheet.deleteRow(row);
   return { success: true };
 }
 

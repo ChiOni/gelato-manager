@@ -88,6 +88,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;fo
 .recipe-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .recipe-name-input{background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 10px;font-size:14px;font-weight:600;width:220px}
 .yield-input{background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;width:90px}
+.ph-inp{background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:2px 4px;font-size:12px;text-align:center}
+.ph-inp:focus{outline:none;border-color:var(--accent)}
 
 .ing-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
 .ing-select{background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 8px;min-width:140px}
@@ -722,6 +724,8 @@ async function submitProduction() {
   btn.textContent = '생산 등록';
 }
 
+const _phTimers = {};
+
 async function loadProdHistory() {
   const el = document.getElementById('prodHistory');
   try {
@@ -729,21 +733,39 @@ async function loadProdHistory() {
     const json = await res.json();
     const data = (json.data || []).reverse().slice(0, 20);
     if (!data.length) { el.innerHTML = '<div class="empty">생산 이력이 없습니다.</div>'; return; }
+
     el.innerHTML = `
       <table>
-        <thead><tr><th>생산시각</th><th>맛</th><th>레시피</th><th style="text-align:center">배치수</th><th></th></tr></thead>
+        <thead><tr>
+          <th style="font-size:11px;white-space:nowrap">년</th>
+          <th style="font-size:11px">월</th>
+          <th style="font-size:11px">일</th>
+          <th style="font-size:11px">시</th>
+          <th>맛</th><th>레시피</th>
+          <th style="text-align:center">배치</th>
+          <th></th>
+        </tr></thead>
         <tbody>
           ${data.map(r => {
-            const ts = String(r['생산시각']||'').slice(0,16).replace('T',' ');
+            const kst = parseKST(String(r['생산시각']||''));
             const row = r._row || '';
-            const rawTime = String(r['생산시각']||'');
-            return `
-            <tr id="phrow-${row}">
-              <td style="color:var(--muted)" id="phtime-${row}">${fmtKST(rawTime)}</td>
-              <td>${r['옵션']||''}</td>
-              <td>${r['레시피']||''}</td>
-              <td style="text-align:center">${r['배치수']||''}</td>
-              <td><button class="btn btn-ghost btn-sm" onclick="startEditProdTime(${row},${JSON.stringify(rawTime)})">수정</button></td>
+            const n = (id, val, w, mn, mx) =>
+              `<input class="ph-inp" data-row="${row}" data-field="${id}" type="number"
+                value="${val}" min="${mn}" max="${mx}" style="width:${w}"
+                onchange="scheduleProdSave('${row}')">`;
+            const t = (id, val, w) =>
+              `<input class="ph-inp" data-row="${row}" data-field="${id}" type="text"
+                value="${String(val).replace(/"/g,'&quot;')}" style="width:${w}"
+                onchange="scheduleProdSave('${row}')">`;
+            return `<tr>
+              <td>${n('y', kst.y, '48px', 2020, 2099)}</td>
+              <td>${n('m', kst.m, '32px', 1, 12)}</td>
+              <td>${n('d', kst.d, '32px', 1, 31)}</td>
+              <td>${n('h', kst.h, '32px', 0, 23)}</td>
+              <td>${t('option', r['옵션']||'', '65px')}</td>
+              <td>${t('recipe', r['레시피']||'', '80px')}</td>
+              <td>${n('batches', r['배치수']||1, '36px', 1, 99)}</td>
+              <td><button class="btn btn-danger btn-sm" onclick="deleteProdRow(${row})">✕</button></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -753,38 +775,39 @@ async function loadProdHistory() {
   }
 }
 
-function startEditProdTime(row, currentIso) {
-  const td = document.getElementById('phtime-' + row);
-  if (!td) return;
-  const kst = parseKST(currentIso);
-  const inp = s => `style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 6px;font-size:12px;width:${s}"`;
-  td.innerHTML = `
-    <input id="eY-${row}" type="number" value="${kst.y}" min="2020" max="2099" ${inp('58px')}>년
-    <input id="eM-${row}" type="number" value="${kst.m}" min="1" max="12" ${inp('38px')}>월
-    <input id="eD-${row}" type="number" value="${kst.d}" min="1" max="31" ${inp('38px')}>일
-    <input id="eH-${row}" type="number" value="${kst.h}" min="0" max="23" ${inp('38px')}>시
-    <button class="btn btn-primary btn-sm" style="margin-left:4px" onclick="saveProdTime(${row})">저장</button>
-    <button class="btn btn-ghost btn-sm" onclick="loadProdHistory()">취소</button>`;
+function scheduleProdSave(row) {
+  clearTimeout(_phTimers[row]);
+  _phTimers[row] = setTimeout(() => saveProdRow(row), 700);
 }
 
-async function saveProdTime(row) {
-  const y = parseInt(document.getElementById('eY-' + row)?.value);
-  const m = parseInt(document.getElementById('eM-' + row)?.value);
-  const d = parseInt(document.getElementById('eD-' + row)?.value);
-  const h = parseInt(document.getElementById('eH-' + row)?.value) || 0;
+async function saveProdRow(row) {
+  const get = field => document.querySelector(`.ph-inp[data-row="${row}"][data-field="${field}"]`)?.value;
+  const y = parseInt(get('y')), m = parseInt(get('m')), d = parseInt(get('d')), h = parseInt(get('h')) || 0;
   if (!y || !m || !d) return;
-  const timeISO = buildKstStr(y, m, d, h);
-  const btn = document.querySelector(`#phtime-${row} .btn-primary`);
-  btn.disabled = true;
-  btn.textContent = '…';
+  const params = new URLSearchParams({
+    action:   'updateProduction',
+    row,
+    time:     buildKstStr(y, m, d, h),
+    option:   get('option')  || '',
+    recipe:   get('recipe')  || '',
+    batches:  get('batches') || 1
+  });
   try {
-    await fetch(API + '?' + new URLSearchParams({ action: 'updateProduction', row, time: timeISO }));
-    showToast('생산시각이 수정되었습니다.');
+    await fetch(API + '?' + params.toString());
+    showToast('저장됨');
+  } catch(e) {
+    showToast('저장 실패');
+  }
+}
+
+async function deleteProdRow(row) {
+  if (!confirm('이 생산 기록을 삭제하시겠습니까?')) return;
+  try {
+    await fetch(API + '?' + new URLSearchParams({ action: 'deleteProduction', row }));
+    showToast('삭제됨');
     loadProdHistory();
   } catch(e) {
-    showToast('수정 실패. 다시 시도해주세요.');
-    btn.disabled = false;
-    btn.textContent = '저장';
+    showToast('삭제 실패');
   }
 }
 
