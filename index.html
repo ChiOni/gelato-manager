@@ -90,6 +90,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;fo
 .yield-input{background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;width:90px}
 .ph-inp{background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:2px 4px;font-size:12px;text-align:center}
 .ph-inp:focus{outline:none;border-color:var(--accent)}
+.ph-sep{color:var(--border);font-size:11px;user-select:none}
+#prodHistory{overflow-x:auto}
+#prodHistory table td{padding:5px 6px}
+#prodHistory table th{padding:6px 6px}
+#prodHistory select.ph-inp{text-align:left;padding:2px 4px}
 
 .ing-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
 .ing-select{background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 8px;min-width:140px}
@@ -726,78 +731,119 @@ async function submitProduction() {
 
 const _phTimers = {};
 
+function _phRecipeOpts(optName, selRecipe) {
+  const opt = META.options.find(o => o.name === optName);
+  const recipes = opt ? META.recipes.filter(r => r.optionId === opt.id) : [];
+  return recipes.map(r =>
+    `<option value="${r.name}" ${r.name === selRecipe ? 'selected' : ''}>${r.name}</option>`
+  ).join('');
+}
+
+function _phRow(r) {
+  const kst     = parseKST(String(r['생산시각'] || ''));
+  const row     = r._row || '';
+  const curOpt  = String(r['옵션']    || '');
+  const curRec  = String(r['레시피']  || '');
+  const ni = (f, v, w, mn, mx) =>
+    `<input class="ph-inp" data-field="${f}" type="number" value="${v}"
+      min="${mn}" max="${mx}" style="width:${w}" onchange="scheduleProdSave('${row}')">`;
+
+  const optOpts = META.options.map(o =>
+    `<option value="${o.name}" ${o.name === curOpt ? 'selected' : ''}>${o.name}</option>`
+  ).join('');
+
+  return `
+  <tr data-row="${row}">
+    <td style="white-space:nowrap">
+      <div style="display:flex;align-items:center;gap:2px">
+        ${ni('y', kst.y, '46px', 2020, 2099)}
+        <span class="ph-sep">/</span>
+        ${ni('m', kst.m, '26px', 1, 12)}
+        <span class="ph-sep">/</span>
+        ${ni('d', kst.d, '26px', 1, 31)}
+        <span style="display:inline-block;width:6px"></span>
+        ${ni('h', kst.h, '26px', 0, 23)}
+        <span class="ph-sep">시</span>
+      </div>
+    </td>
+    <td>
+      <select class="ph-inp" data-field="option" style="max-width:90px"
+        onchange="onPhOptChange(this,'${row}')">
+        ${optOpts}
+      </select>
+    </td>
+    <td>
+      <select class="ph-inp" data-field="recipe" id="phRec-${row}" style="max-width:110px"
+        onchange="scheduleProdSave('${row}')">
+        ${_phRecipeOpts(curOpt, curRec)}
+      </select>
+    </td>
+    <td style="text-align:center">
+      ${ni('batches', r['배치수'] || 1, '36px', 1, 99)}
+    </td>
+    <td>
+      <button class="btn btn-danger btn-sm" onclick="deleteProdRow(${row})">✕</button>
+    </td>
+  </tr>`;
+}
+
 async function loadProdHistory() {
   const el = document.getElementById('prodHistory');
   try {
     const res  = await fetch(API + '?action=getProduction');
     const json = await res.json();
-    const data = (json.data || []).reverse().slice(0, 20);
+    let data   = json.data || [];
+
+    // 생산시각 내림차순 정렬
+    data.sort((a, b) => String(b['생산시각'] || '').localeCompare(String(a['생산시각'] || '')));
+    data = data.slice(0, 30);
+
     if (!data.length) { el.innerHTML = '<div class="empty">생산 이력이 없습니다.</div>'; return; }
 
     el.innerHTML = `
       <table>
         <thead><tr>
-          <th style="font-size:11px;white-space:nowrap">년</th>
-          <th style="font-size:11px">월</th>
-          <th style="font-size:11px">일</th>
-          <th style="font-size:11px">시</th>
-          <th>맛</th><th>레시피</th>
+          <th>생산시각</th>
+          <th>맛</th>
+          <th>레시피</th>
           <th style="text-align:center">배치</th>
           <th></th>
         </tr></thead>
-        <tbody>
-          ${data.map(r => {
-            const kst = parseKST(String(r['생산시각']||''));
-            const row = r._row || '';
-            const n = (id, val, w, mn, mx) =>
-              `<input class="ph-inp" data-row="${row}" data-field="${id}" type="number"
-                value="${val}" min="${mn}" max="${mx}" style="width:${w}"
-                onchange="scheduleProdSave('${row}')">`;
-            const t = (id, val, w) =>
-              `<input class="ph-inp" data-row="${row}" data-field="${id}" type="text"
-                value="${String(val).replace(/"/g,'&quot;')}" style="width:${w}"
-                onchange="scheduleProdSave('${row}')">`;
-            return `<tr>
-              <td>${n('y', kst.y, '48px', 2020, 2099)}</td>
-              <td>${n('m', kst.m, '32px', 1, 12)}</td>
-              <td>${n('d', kst.d, '32px', 1, 31)}</td>
-              <td>${n('h', kst.h, '32px', 0, 23)}</td>
-              <td>${t('option', r['옵션']||'', '65px')}</td>
-              <td>${t('recipe', r['레시피']||'', '80px')}</td>
-              <td>${n('batches', r['배치수']||1, '36px', 1, 99)}</td>
-              <td><button class="btn btn-danger btn-sm" onclick="deleteProdRow(${row})">✕</button></td>
-            </tr>`;
-          }).join('')}
-        </tbody>
+        <tbody>${data.map(_phRow).join('')}</tbody>
       </table>`;
   } catch(e) {
     el.innerHTML = '<div class="empty">이력 로드 실패</div>';
   }
 }
 
+function onPhOptChange(sel, row) {
+  const recSel = document.getElementById('phRec-' + row);
+  if (recSel) recSel.innerHTML = _phRecipeOpts(sel.value, '');
+  scheduleProdSave(row);
+}
+
 function scheduleProdSave(row) {
   clearTimeout(_phTimers[row]);
-  _phTimers[row] = setTimeout(() => saveProdRow(row), 700);
+  _phTimers[row] = setTimeout(() => saveProdRow(row), 600);
 }
 
 async function saveProdRow(row) {
-  const get = field => document.querySelector(`.ph-inp[data-row="${row}"][data-field="${field}"]`)?.value;
+  const tr  = document.querySelector(`tr[data-row="${row}"]`);
+  if (!tr) return;
+  const get = f => tr.querySelector(`[data-field="${f}"]`)?.value;
   const y = parseInt(get('y')), m = parseInt(get('m')), d = parseInt(get('d')), h = parseInt(get('h')) || 0;
   if (!y || !m || !d) return;
-  const params = new URLSearchParams({
-    action:   'updateProduction',
-    row,
-    time:     buildKstStr(y, m, d, h),
-    option:   get('option')  || '',
-    recipe:   get('recipe')  || '',
-    batches:  get('batches') || 1
-  });
   try {
-    await fetch(API + '?' + params.toString());
+    await fetch(API + '?' + new URLSearchParams({
+      action:  'updateProduction',
+      row,
+      time:    buildKstStr(y, m, d, h),
+      option:  get('option')  || '',
+      recipe:  get('recipe')  || '',
+      batches: get('batches') || 1
+    }));
     showToast('저장됨');
-  } catch(e) {
-    showToast('저장 실패');
-  }
+  } catch(e) { showToast('저장 실패'); }
 }
 
 async function deleteProdRow(row) {
