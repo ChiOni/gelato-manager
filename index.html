@@ -591,10 +591,12 @@ function renderProdStep3() {
       return `<span class="ing-tag">${ing ? ing.name : ri.id} ${ri.qty}${ing ? ing.unit : ''}</span>`;
     }).join('');
 
-  // 생산 일시 기본값: 현재 로컬 시각
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  document.getElementById('prodTimeInput').value = now.toISOString().slice(0, 16);
+  // 생산 일시 기본값: 최초 표시 시에만 현재 시각으로 설정
+  if (!document.getElementById('prodTimeInput').value) {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('prodTimeInput').value = now.toISOString().slice(0, 16);
+  }
 
   updateCostPreview();
   document.getElementById('prodBatchInput').oninput = updateCostPreview;
@@ -636,6 +638,7 @@ async function submitProduction() {
     showToast(`등록 완료: ${opt.name} - ${recipe.name} × ${batches}배치`);
     selOptionId = null; selRecipeId = null;
     document.getElementById('prodBatchInput').value = 1;
+    document.getElementById('prodTimeInput').value = '';
     renderProdOptions();
     loadProdHistory();
   } catch(e) {
@@ -655,19 +658,55 @@ async function loadProdHistory() {
     if (!data.length) { el.innerHTML = '<div class="empty">생산 이력이 없습니다.</div>'; return; }
     el.innerHTML = `
       <table>
-        <thead><tr><th>생산시각</th><th>맛</th><th>레시피</th><th style="text-align:center">배치수</th></tr></thead>
+        <thead><tr><th>생산시각</th><th>맛</th><th>레시피</th><th style="text-align:center">배치수</th><th></th></tr></thead>
         <tbody>
-          ${data.map(r => `
-            <tr>
-              <td style="color:var(--muted)">${String(r['생산시각']||'').slice(0,16).replace('T',' ')}</td>
+          ${data.map(r => {
+            const ts = String(r['생산시각']||'').slice(0,16).replace('T',' ');
+            const row = r._row || '';
+            const iso = String(r['생산시각']||'').slice(0,16);
+            return `
+            <tr id="phrow-${row}">
+              <td style="color:var(--muted)" id="phtime-${row}">${ts}</td>
               <td>${r['옵션']||''}</td>
               <td>${r['레시피']||''}</td>
               <td style="text-align:center">${r['배치수']||''}</td>
-            </tr>`).join('')}
+              <td><button class="btn btn-ghost btn-sm" onclick="startEditProdTime(${row},'${iso}')">수정</button></td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>`;
   } catch(e) {
     el.innerHTML = '<div class="empty">이력 로드 실패</div>';
+  }
+}
+
+function startEditProdTime(row, currentIso) {
+  const td = document.getElementById('phtime-' + row);
+  if (!td) return;
+  // datetime-local 값 형식: 'YYYY-MM-DDTHH:mm'
+  const val = currentIso.replace(' ', 'T').slice(0, 16);
+  td.innerHTML = `
+    <input id="phedit-${row}" type="datetime-local" value="${val}"
+      style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 6px;font-size:12px">
+    <button class="btn btn-primary btn-sm" style="margin-left:4px" onclick="saveProdTime(${row})">저장</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadProdHistory()">취소</button>`;
+}
+
+async function saveProdTime(row) {
+  const input = document.getElementById('phedit-' + row);
+  if (!input || !input.value) return;
+  const timeISO = new Date(input.value).toISOString();
+  const btn = input.nextElementSibling;
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    await fetch(API + '?' + new URLSearchParams({ action: 'updateProduction', row, time: timeISO }));
+    showToast('생산시각이 수정되었습니다.');
+    loadProdHistory();
+  } catch(e) {
+    showToast('수정 실패. 다시 시도해주세요.');
+    btn.disabled = false;
+    btn.textContent = '저장';
   }
 }
 
