@@ -145,10 +145,19 @@ function getProduction() {
   return { data: rows };
 }
 
+function _toKstStr(timeParam) {
+  try {
+    var dt = timeParam ? new Date(timeParam) : new Date();
+    return Utilities.formatDate(dt, 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+  } catch(e) {
+    return Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+  }
+}
+
 function addProduction(p) {
   const sheet = getProductionSheet();
   sheet.appendRow([
-    p.time    || new Date().toISOString(),
+    _toKstStr(p.time),
     p.option  || '',
     p.recipe  || '',
     parseInt(p.batches) || 1,
@@ -162,7 +171,7 @@ function updateProduction(p) {
   const row   = parseInt(p.row);
   if (!row || row < 2) return { error: 'Invalid row: ' + p.row };
   if (!p.time) return { error: 'Missing time' };
-  sheet.getRange(row, 1).setValue(p.time);
+  sheet.getRange(row, 1).setValue(_toKstStr(p.time));
   return { success: true };
 }
 

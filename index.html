@@ -420,22 +420,32 @@ function buildKstStr(y, m, d, h) {
   return `${y}-${pad2(m)}-${pad2(d)}T${pad2(h)}:00:00+09:00`;
 }
 
-// 이력 표시용: 저장된 문자열(UTC ISO 또는 KST)을 KST로 변환해 표시
+// 이력 표시용
+// 새 형식 "YYYY-MM-DD HH:mm" → 이미 KST, 변환 없이 표시
+// 구 형식 UTC ISO → +9h 변환
 function fmtKST(timeStr) {
   if (!timeStr) return '';
-  const ms = Date.parse(timeStr);
-  if (isNaN(ms)) return String(timeStr).slice(0, 16).replace('T', ' ');
-  const d = new Date(ms + 9 * 3600 * 1000); // UTC → KST
+  const s = String(timeStr);
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) {
+    return s.slice(0, 10) + ' ' + s.slice(11, 13) + '시';
+  }
+  const ms = Date.parse(s);
+  if (isNaN(ms)) return s.slice(0, 13).replace('T', ' ') + '시';
+  const d = new Date(ms + 9 * 3600 * 1000);
   return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${d.getUTCHours()}시`;
 }
 
-// 저장된 시각 문자열에서 KST 각 필드 추출
+// 수정 UI용: KST 필드 추출
 function parseKST(timeStr) {
   if (!timeStr) return kstNow();
-  const ms = Date.parse(timeStr);
+  const s = String(timeStr);
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) {
+    return { y: +s.slice(0,4), m: +s.slice(5,7), d: +s.slice(8,10), h: +s.slice(11,13) };
+  }
+  const ms = Date.parse(s);
   if (isNaN(ms)) return kstNow();
   const d = new Date(ms + 9 * 3600 * 1000);
-  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), h: d.getUTCHours() };
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth()+1, d: d.getUTCDate(), h: d.getUTCHours() };
 }
 
 function setProdTimeInputs(kst) {
