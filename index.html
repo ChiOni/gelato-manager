@@ -193,6 +193,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       <input id="prodBatchInput" class="batch-input" type="number" min="1" value="1">
       <span style="color:var(--muted)">배치</span>
     </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+      <span style="color:var(--muted);font-size:13px">생산 일시</span>
+      <input id="prodTimeInput" type="datetime-local"
+        style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:13px">
+    </div>
     <div id="prodCostPreview" class="cost-preview"></div>
     <div class="row-btns">
       <button class="btn btn-primary" id="prodSubmitBtn" onclick="submitProduction()">생산 등록</button>
@@ -586,6 +591,11 @@ function renderProdStep3() {
       return `<span class="ing-tag">${ing ? ing.name : ri.id} ${ri.qty}${ing ? ing.unit : ''}</span>`;
     }).join('');
 
+  // 생산 일시 기본값: 현재 로컬 시각
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('prodTimeInput').value = now.toISOString().slice(0, 16);
+
   updateCostPreview();
   document.getElementById('prodBatchInput').oninput = updateCostPreview;
 }
@@ -610,9 +620,12 @@ async function submitProduction() {
   btn.disabled = true;
   btn.textContent = '저장 중…';
 
+  const timeVal = document.getElementById('prodTimeInput').value;
+  const timeISO = timeVal ? new Date(timeVal).toISOString() : new Date().toISOString();
+
   const params = new URLSearchParams({
     action: 'addProduction',
-    time:    new Date().toISOString(),
+    time:    timeISO,
     option:  opt.name,
     recipe:  recipe.name,
     batches
