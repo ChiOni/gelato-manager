@@ -193,10 +193,13 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       <input id="prodBatchInput" class="batch-input" type="number" min="1" value="1">
       <span style="color:var(--muted)">배치</span>
     </div>
-    <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="color:var(--muted);font-size:13px">생산 일시</span>
-      <input id="prodTimeInput" type="datetime-local"
+      <input id="prodDateInput" type="date"
         style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:13px">
+      <select id="prodHourInput"
+        style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:13px">
+      </select>
     </div>
     <div id="prodCostPreview" class="cost-preview"></div>
     <div class="row-btns">
@@ -330,18 +333,27 @@ let chartMenu       = null;
 // ═══════════════════════════════════════════════════════════
 // 탭 전환
 // ═══════════════════════════════════════════════════════════
+const TAB_IDX = {dash:0, prod:1, recipe:2, ingr:3};
+
 function switchTab(name) {
+  if (!TAB_IDX.hasOwnProperty(name)) return;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  const idx = {dash:0, prod:1, recipe:2, ingr:3}[name];
-  document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  document.querySelectorAll('.nav-btn')[TAB_IDX[name]].classList.add('active');
+
+  if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
 
   if (name === 'dash')   loadDash();
   if (name === 'prod')   { renderProdOptions(); loadProdHistory(); }
   if (name === 'recipe') renderRecipeTab();
   if (name === 'ingr')   renderIngrTable();
 }
+
+window.addEventListener('hashchange', () => {
+  const h = location.hash.slice(1);
+  if (TAB_IDX.hasOwnProperty(h)) switchTab(h);
+});
 
 // ═══════════════════════════════════════════════════════════
 // 로컬스토리지
@@ -592,10 +604,12 @@ function renderProdStep3() {
     }).join('');
 
   // 생산 일시 기본값: 최초 표시 시에만 현재 시각으로 설정
-  if (!document.getElementById('prodTimeInput').value) {
+  if (!document.getElementById('prodDateInput').value) {
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('prodTimeInput').value = now.toISOString().slice(0, 16);
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('prodDateInput').value =
+      `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    document.getElementById('prodHourInput').value = now.getHours();
   }
 
   updateCostPreview();
@@ -622,8 +636,11 @@ async function submitProduction() {
   btn.disabled = true;
   btn.textContent = '저장 중…';
 
-  const timeVal = document.getElementById('prodTimeInput').value;
-  const timeISO = timeVal ? new Date(timeVal).toISOString() : new Date().toISOString();
+  const dateVal = document.getElementById('prodDateInput').value;
+  const hourVal = parseInt(document.getElementById('prodHourInput').value) || 0;
+  const timeISO = dateVal
+    ? new Date(`${dateVal}T${String(hourVal).padStart(2,'0')}:00:00`).toISOString()
+    : new Date().toISOString();
 
   const params = new URLSearchParams({
     action: 'addProduction',
@@ -638,7 +655,8 @@ async function submitProduction() {
     showToast(`등록 완료: ${opt.name} - ${recipe.name} × ${batches}배치`);
     selOptionId = null; selRecipeId = null;
     document.getElementById('prodBatchInput').value = 1;
-    document.getElementById('prodTimeInput').value = '';
+    document.getElementById('prodDateInput').value = '';
+    document.getElementById('prodHourInput').value = 0;
     renderProdOptions();
     loadProdHistory();
   } catch(e) {
@@ -683,20 +701,29 @@ async function loadProdHistory() {
 function startEditProdTime(row, currentIso) {
   const td = document.getElementById('phtime-' + row);
   if (!td) return;
-  // datetime-local 값 형식: 'YYYY-MM-DDTHH:mm'
-  const val = currentIso.replace(' ', 'T').slice(0, 16);
+  const iso = currentIso.replace(' ', 'T');
+  const date = iso.slice(0, 10);
+  const hour = parseInt(iso.slice(11, 13)) || 0;
+  const hourOpts = Array.from({length:24}, (_,i) =>
+    `<option value="${i}" ${i===hour?'selected':''}>${i}시</option>`).join('');
   td.innerHTML = `
-    <input id="phedit-${row}" type="datetime-local" value="${val}"
+    <input id="phedit-date-${row}" type="date" value="${date}"
       style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 6px;font-size:12px">
+    <select id="phedit-hour-${row}"
+      style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 6px;font-size:12px">
+      ${hourOpts}
+    </select>
     <button class="btn btn-primary btn-sm" style="margin-left:4px" onclick="saveProdTime(${row})">저장</button>
     <button class="btn btn-ghost btn-sm" onclick="loadProdHistory()">취소</button>`;
 }
 
 async function saveProdTime(row) {
-  const input = document.getElementById('phedit-' + row);
-  if (!input || !input.value) return;
-  const timeISO = new Date(input.value).toISOString();
-  const btn = input.nextElementSibling;
+  const dateInput = document.getElementById('phedit-date-' + row);
+  const hourInput = document.getElementById('phedit-hour-' + row);
+  if (!dateInput || !dateInput.value) return;
+  const h = String(parseInt(hourInput.value)||0).padStart(2,'0');
+  const timeISO = new Date(`${dateInput.value}T${h}:00:00`).toISOString();
+  const btn = hourInput.nextElementSibling;
   btn.disabled = true;
   btn.textContent = '…';
   try {
@@ -972,9 +999,19 @@ function deleteIngredient(idx) {
 // 초기화
 // ═══════════════════════════════════════════════════════════
 async function init() {
-  renderProdOptions();
-  loadDash();
-  loadProdHistory();
+  // Hour select 옵션 생성 (0~23시)
+  const hourSel = document.getElementById('prodHourInput');
+  for (let i = 0; i < 24; i++) {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = i + '시';
+    hourSel.appendChild(opt);
+  }
+
+  // 초기 탭: URL 해시 우선, 없으면 대시보드
+  const initHash = location.hash.slice(1);
+  const startTab = TAB_IDX.hasOwnProperty(initHash) ? initHash : 'dash';
+  switchTab(startTab);
+  if (startTab !== 'prod') loadProdHistory(); // prod가 아니면 미리 로드
 
   // API에서 최신 메타 로드 후 재렌더
   const updated = await loadMetaFromAPI();
