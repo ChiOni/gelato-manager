@@ -193,13 +193,16 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       <input id="prodBatchInput" class="batch-input" type="number" min="1" value="1">
       <span style="color:var(--muted)">배치</span>
     </div>
-    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span style="color:var(--muted);font-size:13px">생산 일시</span>
-      <input id="prodDateInput" type="date"
-        style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:13px">
-      <select id="prodHourInput"
-        style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:13px">
-      </select>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+      <span style="color:var(--muted);font-size:13px;margin-right:4px">생산 일시</span>
+      <input id="ptY" type="number" min="2020" max="2099" style="width:62px;background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
+      <span style="color:var(--muted)">년</span>
+      <input id="ptM" type="number" min="1" max="12" style="width:42px;background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
+      <span style="color:var(--muted)">월</span>
+      <input id="ptD" type="number" min="1" max="31" style="width:42px;background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
+      <span style="color:var(--muted)">일</span>
+      <input id="ptH" type="number" min="0" max="23" style="width:42px;background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
+      <span style="color:var(--muted)">시</span>
     </div>
     <div id="prodCostPreview" class="cost-preview"></div>
     <div class="row-btns">
@@ -402,6 +405,54 @@ function getIngr(id)   { return META.ingredients.find(i => i.id === id); }
 function getOpt(id)    { return META.options.find(o => o.id === id); }
 function getRecipe(id) { return META.recipes.find(r => r.id === id); }
 
+// KST 유틸 ─────────────────────────────────────────────────
+// 항상 KST(+09:00) 기준으로 처리
+const pad2 = n => String(n).padStart(2, '0');
+
+function kstNow() {
+  // UTC ms → KST ms → 각 필드 추출 (getUTC* 사용)
+  const d = new Date(Date.now() + 9 * 3600 * 1000);
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), h: d.getUTCHours() };
+}
+
+// 저장할 시각 문자열: YYYY-MM-DDTHH:00:00+09:00
+function buildKstStr(y, m, d, h) {
+  return `${y}-${pad2(m)}-${pad2(d)}T${pad2(h)}:00:00+09:00`;
+}
+
+// 이력 표시용: 저장된 문자열(UTC ISO 또는 KST)을 KST로 변환해 표시
+function fmtKST(timeStr) {
+  if (!timeStr) return '';
+  const ms = Date.parse(timeStr);
+  if (isNaN(ms)) return String(timeStr).slice(0, 16).replace('T', ' ');
+  const d = new Date(ms + 9 * 3600 * 1000); // UTC → KST
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${d.getUTCHours()}시`;
+}
+
+// 저장된 시각 문자열에서 KST 각 필드 추출
+function parseKST(timeStr) {
+  if (!timeStr) return kstNow();
+  const ms = Date.parse(timeStr);
+  if (isNaN(ms)) return kstNow();
+  const d = new Date(ms + 9 * 3600 * 1000);
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), h: d.getUTCHours() };
+}
+
+function setProdTimeInputs(kst) {
+  document.getElementById('ptY').value = kst.y;
+  document.getElementById('ptM').value = kst.m;
+  document.getElementById('ptD').value = kst.d;
+  document.getElementById('ptH').value = kst.h;
+}
+
+function getProdTimeStr() {
+  const y = parseInt(document.getElementById('ptY').value);
+  const m = parseInt(document.getElementById('ptM').value);
+  const d = parseInt(document.getElementById('ptD').value);
+  const h = parseInt(document.getElementById('ptH').value) || 0;
+  return buildKstStr(y, m, d, h);
+}
+
 const WASTE_FACTOR = 1.1; // 재료 손실 10%
 
 function recipeCost(recipe) {
@@ -603,13 +654,9 @@ function renderProdStep3() {
       return `<span class="ing-tag">${ing ? ing.name : ri.id} ${ri.qty}${ing ? ing.unit : ''}</span>`;
     }).join('');
 
-  // 생산 일시 기본값: 최초 표시 시에만 현재 시각으로 설정
-  if (!document.getElementById('prodDateInput').value) {
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    document.getElementById('prodDateInput').value =
-      `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-    document.getElementById('prodHourInput').value = now.getHours();
+  // 생산 일시 기본값: 최초 표시 시에만 현재 KST 시각으로 설정
+  if (!document.getElementById('ptY').value) {
+    setProdTimeInputs(kstNow());
   }
 
   updateCostPreview();
@@ -636,11 +683,7 @@ async function submitProduction() {
   btn.disabled = true;
   btn.textContent = '저장 중…';
 
-  const dateVal = document.getElementById('prodDateInput').value;
-  const hourVal = parseInt(document.getElementById('prodHourInput').value) || 0;
-  const timeISO = dateVal
-    ? new Date(`${dateVal}T${String(hourVal).padStart(2,'0')}:00:00`).toISOString()
-    : new Date().toISOString();
+  const timeISO = getProdTimeStr();
 
   const params = new URLSearchParams({
     action: 'addProduction',
@@ -655,8 +698,10 @@ async function submitProduction() {
     showToast(`등록 완료: ${opt.name} - ${recipe.name} × ${batches}배치`);
     selOptionId = null; selRecipeId = null;
     document.getElementById('prodBatchInput').value = 1;
-    document.getElementById('prodDateInput').value = '';
-    document.getElementById('prodHourInput').value = 0;
+    document.getElementById('ptY').value = '';
+    document.getElementById('ptM').value = '';
+    document.getElementById('ptD').value = '';
+    document.getElementById('ptH').value = '';
     renderProdOptions();
     loadProdHistory();
   } catch(e) {
@@ -681,14 +726,14 @@ async function loadProdHistory() {
           ${data.map(r => {
             const ts = String(r['생산시각']||'').slice(0,16).replace('T',' ');
             const row = r._row || '';
-            const iso = String(r['생산시각']||'').slice(0,16);
+            const rawTime = String(r['생산시각']||'');
             return `
             <tr id="phrow-${row}">
-              <td style="color:var(--muted)" id="phtime-${row}">${ts}</td>
+              <td style="color:var(--muted)" id="phtime-${row}">${fmtKST(rawTime)}</td>
               <td>${r['옵션']||''}</td>
               <td>${r['레시피']||''}</td>
               <td style="text-align:center">${r['배치수']||''}</td>
-              <td><button class="btn btn-ghost btn-sm" onclick="startEditProdTime(${row},'${iso}')">수정</button></td>
+              <td><button class="btn btn-ghost btn-sm" onclick="startEditProdTime(${row},${JSON.stringify(rawTime)})">수정</button></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -701,29 +746,25 @@ async function loadProdHistory() {
 function startEditProdTime(row, currentIso) {
   const td = document.getElementById('phtime-' + row);
   if (!td) return;
-  const iso = currentIso.replace(' ', 'T');
-  const date = iso.slice(0, 10);
-  const hour = parseInt(iso.slice(11, 13)) || 0;
-  const hourOpts = Array.from({length:24}, (_,i) =>
-    `<option value="${i}" ${i===hour?'selected':''}>${i}시</option>`).join('');
+  const kst = parseKST(currentIso);
+  const inp = s => `style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 6px;font-size:12px;width:${s}"`;
   td.innerHTML = `
-    <input id="phedit-date-${row}" type="date" value="${date}"
-      style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 6px;font-size:12px">
-    <select id="phedit-hour-${row}"
-      style="background:#1f2329;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 6px;font-size:12px">
-      ${hourOpts}
-    </select>
+    <input id="eY-${row}" type="number" value="${kst.y}" min="2020" max="2099" ${inp('58px')}>년
+    <input id="eM-${row}" type="number" value="${kst.m}" min="1" max="12" ${inp('38px')}>월
+    <input id="eD-${row}" type="number" value="${kst.d}" min="1" max="31" ${inp('38px')}>일
+    <input id="eH-${row}" type="number" value="${kst.h}" min="0" max="23" ${inp('38px')}>시
     <button class="btn btn-primary btn-sm" style="margin-left:4px" onclick="saveProdTime(${row})">저장</button>
     <button class="btn btn-ghost btn-sm" onclick="loadProdHistory()">취소</button>`;
 }
 
 async function saveProdTime(row) {
-  const dateInput = document.getElementById('phedit-date-' + row);
-  const hourInput = document.getElementById('phedit-hour-' + row);
-  if (!dateInput || !dateInput.value) return;
-  const h = String(parseInt(hourInput.value)||0).padStart(2,'0');
-  const timeISO = new Date(`${dateInput.value}T${h}:00:00`).toISOString();
-  const btn = hourInput.nextElementSibling;
+  const y = parseInt(document.getElementById('eY-' + row)?.value);
+  const m = parseInt(document.getElementById('eM-' + row)?.value);
+  const d = parseInt(document.getElementById('eD-' + row)?.value);
+  const h = parseInt(document.getElementById('eH-' + row)?.value) || 0;
+  if (!y || !m || !d) return;
+  const timeISO = buildKstStr(y, m, d, h);
+  const btn = document.querySelector(`#phtime-${row} .btn-primary`);
   btn.disabled = true;
   btn.textContent = '…';
   try {
@@ -999,14 +1040,6 @@ function deleteIngredient(idx) {
 // 초기화
 // ═══════════════════════════════════════════════════════════
 async function init() {
-  // Hour select 옵션 생성 (0~23시)
-  const hourSel = document.getElementById('prodHourInput');
-  for (let i = 0; i < 24; i++) {
-    const opt = document.createElement('option');
-    opt.value = i; opt.textContent = i + '시';
-    hourSel.appendChild(opt);
-  }
-
   // 초기 탭: URL 해시 우선, 없으면 대시보드
   const initHash = location.hash.slice(1);
   const startTab = TAB_IDX.hasOwnProperty(initHash) ? initHash : 'dash';
