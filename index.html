@@ -296,21 +296,21 @@ const DEFAULT_METADATA = {
     {id:'o08', name:'초코',         color:'#c67e3a'},
   ],
   recipes: [
-    {id:'r01', optionId:'o01', name:'바나나 기본', yieldPerBatch:1759,
+    {id:'r01', optionId:'o01', name:'바나나 기본',
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i08',qty:450}]},
-    {id:'r02', optionId:'o02', name:'생크림밀크 기본', yieldPerBatch:2461,
+    {id:'r02', optionId:'o02', name:'생크림밀크 기본',
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:755.4},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25}]},
-    {id:'r03', optionId:'o03', name:'레몬요거트 기본', yieldPerBatch:1826,
+    {id:'r03', optionId:'o03', name:'레몬요거트 기본',
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i09',qty:375},{id:'i10',qty:150}]},
-    {id:'r04', optionId:'o04', name:'호지차한라봉 기본', yieldPerBatch:1407,
+    {id:'r04', optionId:'o04', name:'호지차한라봉 기본',
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:230},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i11',qty:30},{id:'i12',qty:75}]},
-    {id:'r05', optionId:'o05', name:'아몬드 기본', yieldPerBatch:1556,
+    {id:'r05', optionId:'o05', name:'아몬드 기본',
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i13',qty:225}]},
-    {id:'r06', optionId:'o06', name:'말차 기본', yieldPerBatch:1488,
+    {id:'r06', optionId:'o06', name:'말차 기본',
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:230},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i14',qty:195}]},
-    {id:'r07', optionId:'o07', name:'딸기소르베 기본', yieldPerBatch:1845,
+    {id:'r07', optionId:'o07', name:'딸기소르베 기본',
      ingredients:[{id:'i15',qty:1500},{id:'i04',qty:345},{id:'i05',qty:64.35},{id:'i06',qty:123.525},{id:'i07',qty:16.875}]},
-    {id:'r08', optionId:'o08', name:'초코 기본', yieldPerBatch:2565,
+    {id:'r08', optionId:'o08', name:'초코 기본',
      ingredients:[{id:'i16',qty:2850},{id:'i17',qty:1}]},
   ]
 };
@@ -393,6 +393,13 @@ function recipeCost(recipe) {
     return sum + (ing ? ing.price * ri.qty : 0);
   }, 0);
   return raw * WASTE_FACTOR;
+}
+
+function batchVolume(recipe) {
+  return recipe.ingredients.reduce((sum, ri) => {
+    const ing = getIngr(ri.id);
+    return sum + (ing && ing.unit === 'g' ? ri.qty : 0);
+  }, 0);
 }
 
 function showToast(msg) {
@@ -544,13 +551,14 @@ function renderProdStep2() {
   list.innerHTML = '';
   recipes.forEach(recipe => {
     const cost   = recipeCost(recipe);
-    const per120 = recipe.yieldPerBatch ? Math.round(cost / recipe.yieldPerBatch * 120) : 0;
+    const vol    = batchVolume(recipe);
+    const per120 = vol ? Math.round(cost / vol * 120) : 0;
     const div    = document.createElement('div');
     div.className = 'recipe-item' + (recipe.id === selRecipeId ? ' selected' : '');
     div.innerHTML = `
       <div>
         <div>${recipe.name}</div>
-        <div class="recipe-meta">배치당 ${recipe.yieldPerBatch}g &nbsp;·&nbsp; 배치원가 ${fmt(cost)} &nbsp;·&nbsp; 120g당 ${per120}원</div>
+        <div class="recipe-meta">배치 용량 ${vol.toLocaleString()}g &nbsp;·&nbsp; 배치원가 ${fmt(cost)} &nbsp;·&nbsp; 120g당 ${per120}원</div>
       </div>
       <span style="color:var(--muted);font-size:18px">›</span>`;
     div.onclick = () => selectProdRecipe(recipe.id);
@@ -587,7 +595,7 @@ function updateCostPreview() {
   if (!recipe) return;
   const batches = parseInt(document.getElementById('prodBatchInput').value) || 1;
   const total   = recipeCost(recipe) * batches;
-  const totalG  = recipe.yieldPerBatch * batches;
+  const totalG  = batchVolume(recipe) * batches;
   document.getElementById('prodCostPreview').innerHTML =
     `총 생산량 <span class="cost-highlight">${totalG.toLocaleString()}g</span> &nbsp;·&nbsp; 예상 원가 <span class="cost-highlight">${fmt(total)}</span>`;
 }
@@ -707,7 +715,8 @@ function renderRecipeEditor() {
 
 function renderRecipeCard(recipe) {
   const cost   = recipeCost(recipe);
-  const per120 = recipe.yieldPerBatch ? Math.round(cost / recipe.yieldPerBatch * 120) : 0;
+  const vol    = batchVolume(recipe);
+  const per120 = vol ? Math.round(cost / vol * 120) : 0;
 
   const ingOptions = META.ingredients.map(ing =>
     `<option value="${ing.id}">${ing.name} (${ing.unit})</option>`
@@ -734,9 +743,7 @@ function renderRecipeCard(recipe) {
           <input class="recipe-name-input" value="${recipe.name}"
             onchange="updateRecipeName('${recipe.id}',this.value)">
           <div style="font-size:11px;color:var(--muted);margin-top:4px">
-            배치 수율:
-            <input class="yield-input" type="number" value="${recipe.yieldPerBatch}" min="0"
-              onchange="updateRecipeYield('${recipe.id}',this.value)"> g
+            배치 용량: <span id="rvol-${recipe.id}">${vol.toLocaleString()}</span>g
           </div>
         </div>
         <div style="display:flex;gap:6px">
@@ -778,7 +785,7 @@ function deleteOption(id) {
   persistMeta(); renderRecipeTab();
 }
 function addRecipe(optionId) {
-  const r = { id: 'r' + uid(), optionId, name: '새 레시피', yieldPerBatch: 1800, ingredients: [] };
+  const r = { id: 'r' + uid(), optionId, name: '새 레시피', ingredients: [] };
   META.recipes.push(r);
   persistMeta(); renderRecipeEditor();
 }
@@ -816,7 +823,6 @@ function confirmCopy() {
     id: 'r' + uid(),
     optionId: targetId,
     name: src.name + ' (복사본)',
-    yieldPerBatch: src.yieldPerBatch,
     ingredients: JSON.parse(JSON.stringify(src.ingredients))
   };
   META.recipes.push(newRecipe);
@@ -831,10 +837,6 @@ function confirmCopy() {
 function updateRecipeName(id, val) {
   const r = getRecipe(id);
   if (r) { r.name = val; persistMeta(); refreshRecipeCost(id); }
-}
-function updateRecipeYield(id, val) {
-  const r = getRecipe(id);
-  if (r) { r.yieldPerBatch = parseFloat(val) || 0; persistMeta(); refreshRecipeCost(id); }
 }
 function updateIngredient(recipeId, idx, field, val) {
   const r = getRecipe(recipeId);
@@ -860,10 +862,13 @@ function refreshRecipeCost(recipeId) {
   const r    = getRecipe(recipeId);
   if (!r) return;
   const cost   = recipeCost(r);
-  const per120 = r.yieldPerBatch ? Math.round(cost / r.yieldPerBatch * 120) : 0;
+  const vol    = batchVolume(r);
+  const per120 = vol ? Math.round(cost / vol * 120) : 0;
   const el     = document.getElementById('rcost-' + recipeId);
   if (el) el.innerHTML =
     `배치 원가: <strong style="color:var(--green)">${fmt(cost)}</strong> &nbsp;·&nbsp; 120g당: <strong style="color:var(--accent)">${per120}원</strong> <span style="color:var(--muted)">(재료비 × 1.1 손실 포함)</span>`;
+  const velEl  = document.getElementById('rvol-' + recipeId);
+  if (velEl) velEl.textContent = vol.toLocaleString();
 }
 
 // ═══════════════════════════════════════════════════════════
