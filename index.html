@@ -91,8 +91,20 @@ body {
   margin-bottom: 16px;
 }
 
-/* ════ Trend Chart ══════════════════════════════════════ */
-.trend-period-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* ════ Segmented Control ════════════════════════════════ */
+.seg-ctrl { display:flex; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:3px; }
+.seg-btn  { background:none; border:none; padding:5px 18px; border-radius:6px; font-size:13px; font-weight:500; color:var(--muted); cursor:pointer; transition:all .2s; }
+.seg-btn.active { background:var(--surface); color:var(--accent); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+
+/* ════ Flavor Filter Dropdown ═══════════════════════════ */
+.filter-wrap { position:relative; }
+.filter-btn  { display:flex; align-items:center; gap:5px; background:var(--surface); border:1px solid var(--border-2); border-radius:var(--r-sm); padding:6px 12px; font-size:13px; font-weight:500; color:var(--text); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.filter-btn:hover { border-color:var(--accent); color:var(--accent); }
+.filter-panel { position:absolute; top:calc(100% + 6px); right:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--sh-md); min-width:180px; z-index:200; overflow:hidden; }
+.filter-panel-hdr { padding:10px 14px 8px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.filter-all-btn { font-size:11px; color:var(--accent); background:none; border:none; cursor:pointer; font-weight:600; }
+.filter-item { display:flex; align-items:center; gap:8px; padding:8px 14px; cursor:pointer; transition:background .1s; font-size:13px; }
+.filter-item:hover { background:var(--bg); }
 
 /* ════ Production Steps ═════════════════════════════════ */
 .step-label {
@@ -210,18 +222,20 @@ body {
 .recipe-name-input:focus { outline: none; border-bottom-color: var(--accent); }
 .yield-input { background: var(--inp); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px 8px; width: 90px; }
 
-/* ── 이력 인라인 편집 ─────────────────────────────── */
+/* ── 이력 인라인 편집 (클릭 시 편집) ──────────────── */
 .ph-inp {
-  background: var(--inp); border: 1px solid var(--border);
+  background: transparent; border: 1px solid transparent;
   color: var(--text); border-radius: 5px;
-  padding: 3px 5px; font-size: 12px; text-align: center; transition: border-color .15s;
+  padding: 4px 6px; font-size: 13px; text-align: center;
+  transition: all .15s; font-family: inherit; cursor: default;
 }
-.ph-inp:focus      { outline: none; border-color: var(--accent); background: #fff; }
-.ph-sep            { color: var(--muted); font-size: 11px; user-select: none; }
-#prodHistory       { overflow-x: auto; }
-#prodHistory table td  { padding: 6px 8px; }
-#prodHistory table th  { padding: 8px 8px; }
-#prodHistory select.ph-inp { text-align: left; }
+.ph-inp:hover  { border-color: var(--border); background: var(--inp); cursor: text; }
+.ph-inp:focus  { outline: none; border-color: var(--accent); background: #fff; cursor: text; }
+.ph-sep        { color: var(--border-2); font-size: 11px; user-select: none; }
+#prodHistory   { overflow-x: auto; }
+#prodHistory table td  { padding: 11px 14px; }
+#prodHistory table th  { padding: 10px 14px; }
+#prodHistory select.ph-inp { text-align: left; cursor: pointer; }
 
 .ing-row   { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .ing-select { background: var(--inp); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; min-width: 150px; font-size: 13px; }
@@ -289,58 +303,40 @@ select, input   { font-family: inherit; }
 <div id="tab-prod" class="tab active">
 
   <!-- 주별/월별 생산량 추이 차트 -->
-  <div class="card" style="margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div class="card-title" style="margin-bottom:0">주별 생산량 추이</div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm trend-period-btn active" data-period="week" onclick="setProdTrendPeriod('week')">주간</button>
-        <button class="btn btn-ghost btn-sm trend-period-btn" data-period="month" onclick="setProdTrendPeriod('month')">월간</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <!-- 맛 필터 드롭다운 -->
+        <div class="filter-wrap" id="flavorFilterWrap">
+          <button class="filter-btn" onclick="toggleFlavorDropdown(event)">
+            <span id="flavorFilterLabel">전체 맛</span>
+            <span style="font-size:10px;opacity:.6">▾</span>
+          </button>
+          <div class="filter-panel" id="flavorFilterPanel" style="display:none">
+            <div class="filter-panel-hdr">
+              <span style="font-size:12px;font-weight:600;color:var(--muted)">맛 필터</span>
+              <button class="filter-all-btn" onclick="selectAllFlavors(event)">전체 선택</button>
+            </div>
+            <div id="flavorCheckboxList"></div>
+          </div>
+        </div>
+        <!-- 주간/월간 세그먼트 -->
+        <div class="seg-ctrl">
+          <button class="seg-btn active" data-period="week" onclick="setProdTrendPeriod('week')">주간</button>
+          <button class="seg-btn" data-period="month" onclick="setProdTrendPeriod('month')">월간</button>
+        </div>
       </div>
     </div>
-    <div id="prodTrendFlavorFilter" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px"></div>
     <canvas id="chartProdTrend" height="160"></canvas>
   </div>
 
-  <!-- Step 1: 맛 선택 -->
-  <div class="step-box">
-    <div class="step-label">Step 1 — 맛 선택</div>
-    <div class="option-grid" id="prodOptionGrid"></div>
-  </div>
-
-  <!-- Step 2: 레시피 선택 -->
-  <div class="step-box" id="prodStep2" style="display:none">
-    <div class="step-label">Step 2 — 레시피 선택</div>
-    <div class="recipe-list" id="prodRecipeList"></div>
-  </div>
-
-  <!-- Step 3: 배치 수 입력 -->
-  <div class="step-box" id="prodStep3" style="display:none">
-    <div class="step-label">Step 3 — 배치 수 입력</div>
-    <div id="prodIngPreview" class="ingredient-preview"></div>
-    <div class="batch-row">
-      <input id="prodBatchInput" class="batch-input" type="number" min="1" value="1">
-      <span style="color:var(--muted)">배치</span>
-    </div>
-    <div style="margin-top:10px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-      <span style="color:var(--muted);font-size:13px;margin-right:4px">생산 일시</span>
-      <input id="ptY" type="number" min="2020" max="2099" style="width:62px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
-      <span style="color:var(--muted)">년</span>
-      <input id="ptM" type="number" min="1" max="12" style="width:42px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
-      <span style="color:var(--muted)">월</span>
-      <input id="ptD" type="number" min="1" max="31" style="width:42px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
-      <span style="color:var(--muted)">일</span>
-      <input id="ptH" type="number" min="0" max="23" style="width:42px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:13px">
-      <span style="color:var(--muted)">시</span>
-    </div>
-    <div id="prodCostPreview" class="cost-preview"></div>
-    <div class="row-btns">
-      <button class="btn btn-primary" id="prodSubmitBtn" onclick="submitProduction()">생산 등록</button>
-    </div>
-  </div>
-
   <!-- 생산 이력 -->
-  <div class="card" style="margin-top:8px">
-    <div class="card-title">최근 생산 이력</div>
+  <div class="card">
+    <div class="section-hdr">
+      <h3>생산 이력</h3>
+      <button class="btn btn-primary btn-sm" onclick="openAddProdModal()">+ 생산 등록</button>
+    </div>
     <div id="prodHistory"><div class="empty">로드 중…</div></div>
   </div>
 </div>
@@ -380,6 +376,58 @@ select, input   { font-family: inherit; }
     </table>
   </div>
   <!-- 재료 변경은 onchange에서 자동 저장됩니다 -->
+</div>
+
+<!-- 생산 등록 모달 -->
+<div class="modal-overlay" id="addProdModal">
+  <div class="modal-box" style="width:520px;max-width:95vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h4>생산 등록</h4>
+      <button class="btn btn-ghost btn-sm" onclick="closeAddProdModal()">✕</button>
+    </div>
+
+    <!-- 맛 선택 -->
+    <div style="margin-bottom:16px">
+      <div class="step-label">맛 선택</div>
+      <div class="option-grid" id="prodOptionGrid"></div>
+    </div>
+
+    <!-- 레시피 선택 -->
+    <div id="prodStep2" style="display:none;margin-bottom:16px">
+      <div class="step-label">레시피 선택</div>
+      <div class="recipe-list" id="prodRecipeList"></div>
+    </div>
+
+    <!-- 배치 + 일시 -->
+    <div id="prodStep3" style="display:none">
+      <div class="step-label">배치 수 & 생산 일시</div>
+      <div id="prodIngPreview" class="ingredient-preview" style="margin-bottom:14px"></div>
+      <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">배치 수</div>
+          <input id="prodBatchInput" class="batch-input" type="number" min="1" value="1">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">생산 일시</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input id="ptY" type="number" min="2020" max="2099" style="width:64px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit">
+            <span style="color:var(--muted);font-size:12px">년</span>
+            <input id="ptM" type="number" min="1" max="12" style="width:44px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit">
+            <span style="color:var(--muted);font-size:12px">월</span>
+            <input id="ptD" type="number" min="1" max="31" style="width:44px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit">
+            <span style="color:var(--muted);font-size:12px">일</span>
+            <input id="ptH" type="number" min="0" max="23" style="width:44px;background:var(--inp);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit">
+            <span style="color:var(--muted);font-size:12px">시</span>
+          </div>
+        </div>
+      </div>
+      <div id="prodCostPreview" class="cost-preview" style="margin-top:12px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <button class="btn btn-ghost" onclick="closeAddProdModal()">취소</button>
+        <button class="btn btn-primary" id="prodSubmitBtn" onclick="submitProduction()">등록</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- copy modal -->
@@ -477,7 +525,7 @@ function switchTab(name) {
 
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
 
-  if (name === 'prod')   { renderProdOptions(); loadProdHistory(); }
+  if (name === 'prod')   { loadProdHistory(); }
   if (name === 'recipe') renderRecipeTab();
   if (name === 'ingr')   renderIngrTable();
 }
@@ -641,37 +689,78 @@ function getPeriodLabel(timeStr) {
 }
 
 function renderFlavorFilter() {
-  const container = document.getElementById('prodTrendFlavorFilter');
+  const container = document.getElementById('flavorCheckboxList');
   if (!container) return;
   const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
-  if (!prodTrendFlavorFilter) {
-    prodTrendFlavorFilter = new Set(allFlavors);
-  }
+  if (!prodTrendFlavorFilter) prodTrendFlavorFilter = new Set(allFlavors);
   container.innerHTML = allFlavors.map(f => {
     const opt = META.options.find(o => o.name === f);
     const color = opt ? opt.color : '#5794f2';
-    const checked = prodTrendFlavorFilter.has(f) ? 'checked' : '';
-    return `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none">
-      <input type="checkbox" ${checked} onchange="toggleFlavorFilter('${f}',this.checked)" style="accent-color:${color}">
+    const checked = prodTrendFlavorFilter.has(f);
+    return `<div class="filter-item" onclick="toggleFlavorFilter('${f}',${!checked})">
+      <input type="checkbox" ${checked ? 'checked' : ''} style="accent-color:${color};pointer-events:none">
       <span class="option-dot" style="background:${color}"></span>
-      <span style="font-size:12px">${f}</span>
-    </label>`;
+      <span>${f}</span>
+    </div>`;
   }).join('');
+  updateFlavorFilterLabel(allFlavors);
+}
+
+function updateFlavorFilterLabel(allFlavors) {
+  const el = document.getElementById('flavorFilterLabel');
+  if (!el) return;
+  const n = allFlavors.filter(f => prodTrendFlavorFilter && prodTrendFlavorFilter.has(f)).length;
+  el.textContent = n === 0 ? '없음' : n === allFlavors.length ? '전체 맛' : `${n}개 선택`;
+}
+
+function toggleFlavorDropdown(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('flavorFilterPanel');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    setTimeout(() => document.addEventListener('click', () => {
+      panel.style.display = 'none';
+    }, { once: true }), 0);
+  }
+}
+
+function selectAllFlavors(e) {
+  e.stopPropagation();
+  const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
+  prodTrendFlavorFilter = new Set(allFlavors);
+  renderFlavorFilter();
+  renderProdTrendChart();
 }
 
 function toggleFlavorFilter(flavor, checked) {
   if (!prodTrendFlavorFilter) prodTrendFlavorFilter = new Set();
   if (checked) prodTrendFlavorFilter.add(flavor);
   else prodTrendFlavorFilter.delete(flavor);
+  renderFlavorFilter();
   renderProdTrendChart();
 }
 
 function setProdTrendPeriod(p) {
   prodTrendPeriod = p;
-  document.querySelectorAll('.trend-period-btn').forEach(b => {
+  document.querySelectorAll('.seg-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.period === p);
   });
   renderProdTrendChart();
+}
+
+function openAddProdModal() {
+  selOptionId = null; selRecipeId = null;
+  document.getElementById('prodBatchInput').value = 1;
+  ['ptY','ptM','ptD','ptH'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('prodCostPreview').innerHTML = '';
+  document.getElementById('addProdModal').classList.add('show');
+  renderProdOptions();
+}
+
+function closeAddProdModal() {
+  document.getElementById('addProdModal').classList.remove('show');
+  selOptionId = null; selRecipeId = null;
 }
 
 function renderProdTrendChart() {
@@ -849,13 +938,7 @@ async function submitProduction() {
   try {
     await fetch(API + '?' + params.toString());
     showToast(`등록 완료: ${opt.name} - ${recipe.name} × ${batches}배치`);
-    selOptionId = null; selRecipeId = null;
-    document.getElementById('prodBatchInput').value = 1;
-    document.getElementById('ptY').value = '';
-    document.getElementById('ptM').value = '';
-    document.getElementById('ptD').value = '';
-    document.getElementById('ptH').value = '';
-    renderProdOptions();
+    closeAddProdModal();
     loadProdHistory();
   } catch(e) {
     showToast('저장 실패. 다시 시도해주세요.');
