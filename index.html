@@ -29,14 +29,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;fo
 .card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
 .card-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
 
-/* ── 대시보드 ─────────────────────────────────────── */
-.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
-.stat{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px}
-.stat-label{font-size:11px;color:var(--muted);margin-bottom:6px}
-.stat-value{font-size:24px;font-weight:700;color:var(--accent)}
-.stat-value.green{color:var(--green)}
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:700px){.charts{grid-template-columns:1fr}}
+/* ── 생산 추이 차트 ───────────────────────────────── */
+.trend-period-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ── 생산 등록 ─────────────────────────────────────── */
 .option-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px}
@@ -135,50 +129,28 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 
 <!-- ── 네비 ──────────────────────────────────────── -->
 <nav class="nav">
-  <button class="nav-btn active" onclick="switchTab('dash')">대시보드</button>
-  <button class="nav-btn" onclick="switchTab('prod')">생산 관리</button>
+  <button class="nav-btn active" onclick="switchTab('prod')">생산 관리</button>
   <button class="nav-btn" onclick="switchTab('recipe')">레시피 관리</button>
   <button class="nav-btn" onclick="switchTab('ingr')">재료 관리</button>
 </nav>
 
 <!-- ══════════════════════════════════════════════
-     탭 1: 대시보드
+     탭 1: 생산 관리
 ════════════════════════════════════════════════ -->
-<div id="tab-dash" class="tab active">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <span id="dashStatus" style="font-size:12px;color:var(--muted)">로드 중…</span>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost btn-sm" onclick="downloadBackup()">📥 백업 다운로드</button>
-      <button class="btn btn-ghost btn-sm" onclick="loadDash()">↻ 새로고침</button>
-    </div>
-  </div>
-  <div class="stats">
-    <div class="stat"><div class="stat-label">이번달 매출</div><div class="stat-value" id="s-monthly">—</div></div>
-    <div class="stat"><div class="stat-label">오늘 매출</div><div class="stat-value green" id="s-today">—</div></div>
-    <div class="stat"><div class="stat-label">오늘 건수</div><div class="stat-value" id="s-count">—</div></div>
-    <div class="stat"><div class="stat-label">이달 생산기록</div><div class="stat-value" id="s-prod">—</div></div>
-    <div class="stat"><div class="stat-label">누적 배치수</div><div class="stat-value" id="s-batches">—</div></div>
-  </div>
-  <div class="charts">
-    <div class="card">
-      <div class="card-title">월별 매출 추이</div>
-      <canvas id="chartMonthly" height="200"></canvas>
-    </div>
-    <div class="card">
-      <div class="card-title">이달 메뉴별 매출</div>
-      <canvas id="chartMenu" height="200"></canvas>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">최근 판매 이력</div>
-    <div id="dashSalesHistory"><div class="empty">로드 중…</div></div>
-  </div>
-</div>
+<div id="tab-prod" class="tab active">
 
-<!-- ══════════════════════════════════════════════
-     탭 2: 생산 등록
-════════════════════════════════════════════════ -->
-<div id="tab-prod" class="tab">
+  <!-- 주별/월별 생산량 추이 차트 -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="card-title" style="margin-bottom:0">주별 생산량 추이</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm trend-period-btn active" data-period="week" onclick="setProdTrendPeriod('week')">주간</button>
+        <button class="btn btn-ghost btn-sm trend-period-btn" data-period="month" onclick="setProdTrendPeriod('month')">월간</button>
+      </div>
+    </div>
+    <div id="prodTrendFlavorFilter" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px"></div>
+    <canvas id="chartProdTrend" height="160"></canvas>
+  </div>
 
   <!-- Step 1: 맛 선택 -->
   <div class="step-box">
@@ -337,13 +309,15 @@ let META            = loadMetaLocal();
 let selOptionId     = null;   // 생산 등록: 선택된 옵션
 let selRecipeId     = null;   // 생산 등록: 선택된 레시피
 let editingOptionId = null;   // 레시피 관리: 선택된 옵션
-let chartMonthly    = null;
-let chartMenu       = null;
+let chartProdTrend  = null;
+let prodTrendPeriod = 'week';
+let prodRawData     = [];
+let prodTrendFlavorFilter = null; // Set or null (null = 미초기화)
 
 // ═══════════════════════════════════════════════════════════
 // 탭 전환
 // ═══════════════════════════════════════════════════════════
-const TAB_IDX = {dash:0, prod:1, recipe:2, ingr:3};
+const TAB_IDX = {prod:0, recipe:1, ingr:2};
 
 function switchTab(name) {
   if (!TAB_IDX.hasOwnProperty(name)) return;
@@ -354,7 +328,6 @@ function switchTab(name) {
 
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
 
-  if (name === 'dash')   loadDash();
   if (name === 'prod')   { renderProdOptions(); loadProdHistory(); }
   if (name === 'recipe') renderRecipeTab();
   if (name === 'ingr')   renderIngrTable();
@@ -494,110 +467,124 @@ function showToast(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-function downloadBackup() {
-  const backup = {
-    exportedAt: new Date().toISOString(),
-    version: 'v3',
-    metadata: META
-  };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const a    = document.createElement('a');
-  a.href     = URL.createObjectURL(blob);
-  a.download = 'gelato-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-  a.click();
-  showToast('백업 파일이 다운로드되었습니다.');
-}
-
 // ═══════════════════════════════════════════════════════════
-// 탭 1: 대시보드
+// 생산량 추이 차트
 // ═══════════════════════════════════════════════════════════
-async function loadDash() {
-  const statusEl = document.getElementById('dashStatus');
-  if (statusEl) statusEl.textContent = '로드 중…';
-  try {
-    const [dashRes, salesRes] = await Promise.all([
-      fetch(API + '?action=getDashboard'),
-      fetch(API + '?action=getSales')
-    ]);
-    const d = await dashRes.json();
-    const s = await salesRes.json();
-
-    if (d.error) throw new Error(d.error);
-
-    document.getElementById('s-monthly').textContent = fmt(d.monthlySales  || 0);
-    document.getElementById('s-today').textContent   = fmt(d.todaySales    || 0);
-    document.getElementById('s-count').textContent   = (d.todayCount       || 0) + '건';
-    document.getElementById('s-prod').textContent    = (d.monthlyProduction|| 0) + '건';
-    document.getElementById('s-batches').textContent = (d.totalBatches     || 0) + '배치';
-
-    renderChartMonthly(d.monthlySalesByMonth || {});
-    renderChartMenu(d.menuSummary || {});
-
-    // 최근 판매 이력
-    const salesData = (s.data || []).reverse().slice(0, 30);
-    const histEl = document.getElementById('dashSalesHistory');
-    if (histEl) {
-      if (!salesData.length) {
-        histEl.innerHTML = '<div class="empty">판매 데이터가 없습니다. 구글 시트의 판매기록 또는 상품주문상세내역 탭을 확인하세요.</div>';
-      } else {
-        histEl.innerHTML = `
-          <table>
-            <thead><tr><th>날짜</th><th>메뉴</th><th>수량</th><th style="text-align:right">금액</th></tr></thead>
-            <tbody>
-              ${salesData.map(r => `
-                <tr>
-                  <td style="color:var(--muted)">${String(r['판매일']||r['업로드일']||'').slice(0,10)}</td>
-                  <td>${r['메뉴']||''}</td>
-                  <td style="text-align:center">${r['수량']||''}</td>
-                  <td style="text-align:right;color:var(--green)">${Math.round(r['금액']||0).toLocaleString()}원</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>`;
-      }
-    }
-
-    const now = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
-    if (statusEl) statusEl.textContent = `마지막 업데이트: ${now}`;
-  } catch(e) {
-    console.error('대시보드 로드 실패', e);
-    if (statusEl) statusEl.innerHTML = `<span style="color:var(--red)">연결 실패 — Apps Script 재배포 여부를 확인하세요.</span>`;
-    const histEl = document.getElementById('dashSalesHistory');
-    if (histEl) histEl.innerHTML = '<div class="empty">데이터를 불러올 수 없습니다.</div>';
+function parseDateOnly(timeStr) {
+  const s = String(timeStr || '');
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s.slice(0, 10));
+  const ms = Date.parse(s);
+  if (!isNaN(ms)) {
+    const d = new Date(ms + 9 * 3600 * 1000);
+    return new Date(`${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())}`);
   }
+  return null;
 }
 
-function renderChartMonthly(byMonth) {
-  const sorted = Object.keys(byMonth).sort();
-  if (chartMonthly) chartMonthly.destroy();
-  chartMonthly = new Chart(document.getElementById('chartMonthly'), {
+function getPeriodLabel(timeStr) {
+  const d = parseDateOnly(timeStr);
+  if (!d) return null;
+  if (prodTrendPeriod === 'month') {
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
+  }
+  const weekNum = Math.ceil(d.getDate() / 7);
+  return `${d.getMonth()+1}월${weekNum}주`;
+}
+
+function renderFlavorFilter() {
+  const container = document.getElementById('prodTrendFlavorFilter');
+  if (!container) return;
+  const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
+  if (!prodTrendFlavorFilter) {
+    prodTrendFlavorFilter = new Set(allFlavors);
+  }
+  container.innerHTML = allFlavors.map(f => {
+    const opt = META.options.find(o => o.name === f);
+    const color = opt ? opt.color : '#5794f2';
+    const checked = prodTrendFlavorFilter.has(f) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none">
+      <input type="checkbox" ${checked} onchange="toggleFlavorFilter('${f}',this.checked)" style="accent-color:${color}">
+      <span class="option-dot" style="background:${color}"></span>
+      <span style="font-size:12px">${f}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleFlavorFilter(flavor, checked) {
+  if (!prodTrendFlavorFilter) prodTrendFlavorFilter = new Set();
+  if (checked) prodTrendFlavorFilter.add(flavor);
+  else prodTrendFlavorFilter.delete(flavor);
+  renderProdTrendChart();
+}
+
+function setProdTrendPeriod(p) {
+  prodTrendPeriod = p;
+  document.querySelectorAll('.trend-period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.period === p);
+  });
+  renderProdTrendChart();
+}
+
+function renderProdTrendChart() {
+  const START = new Date('2026-03-01');
+  const periodMap = {};
+
+  prodRawData.forEach(r => {
+    const d = parseDateOnly(String(r['생산시각']||''));
+    if (!d || d < START) return;
+    const optName = String(r['옵션']||'');
+    if (!optName) return;
+    const label = getPeriodLabel(String(r['생산시각']||''));
+    if (!label) return;
+
+    const opt    = META.options.find(o => o.name === optName);
+    const recipe = opt ? META.recipes.find(rc => rc.optionId === opt.id && rc.name === String(r['레시피']||'')) : null;
+    const vol    = recipe ? batchVolume(recipe) * (parseInt(r['배치수'])||1) : 0;
+
+    if (!periodMap[label]) periodMap[label] = {};
+    periodMap[label][optName] = (periodMap[label][optName] || 0) + vol;
+  });
+
+  const periods = Object.keys(periodMap).sort((a, b) => {
+    if (prodTrendPeriod === 'week') {
+      const pa = a.match(/(\d+)월(\d+)주/), pb = b.match(/(\d+)월(\d+)주/);
+      if (pa && pb) return (parseInt(pa[1])*10+parseInt(pa[2])) - (parseInt(pb[1])*10+parseInt(pb[2]));
+    }
+    return a.localeCompare(b);
+  });
+
+  const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
+  const flavors    = allFlavors.filter(f => prodTrendFlavorFilter && prodTrendFlavorFilter.has(f));
+
+  const datasets = flavors.map(f => {
+    const opt = META.options.find(o => o.name === f);
+    return {
+      label: f,
+      data: periods.map(p => (periodMap[p]&&periodMap[p][f]) || 0),
+      backgroundColor: opt ? opt.color : '#5794f2',
+      borderWidth: 0,
+      stack: 'stack'
+    };
+  });
+
+  if (chartProdTrend) chartProdTrend.destroy();
+  const canvas = document.getElementById('chartProdTrend');
+  if (!canvas) return;
+
+  chartProdTrend = new Chart(canvas, {
     type: 'bar',
-    data: {
-      labels: sorted,
-      datasets: [{ label:'매출', data: sorted.map(k => byMonth[k]),
-        backgroundColor:'rgba(87,148,242,.6)', borderColor:'#5794f2', borderWidth:1 }]
-    },
+    data: { labels: periods, datasets },
     options: {
-      plugins:{ legend:{ display:false } },
-      scales:{
-        x:{ ticks:{ color:'#8e9196' }, grid:{ color:'#2c2f35' } },
-        y:{ ticks:{ color:'#8e9196', callback: v => (v/10000).toFixed(0)+'만' }, grid:{ color:'#2c2f35' } }
+      responsive: true,
+      plugins: {
+        legend: { labels: { color:'#d8d9da', font:{ size:11 } } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}g` } }
+      },
+      scales: {
+        x: { stacked:true, ticks:{ color:'#8e9196' }, grid:{ color:'#2c2f35' } },
+        y: { stacked:true, ticks:{ color:'#8e9196', callback: v => v>=1000?(v/1000).toFixed(1)+'kg':v+'g' }, grid:{ color:'#2c2f35' } }
       }
     }
-  });
-}
-
-function renderChartMenu(menuSummary) {
-  const entries = Object.entries(menuSummary).sort((a,b) => b[1].amount - a[1].amount).slice(0,8);
-  const colors  = ['#5794f2','#73bf69','#fade2a','#f2495c','#ff9830','#b877d9','#a0d898','#c67e3a'];
-  if (chartMenu) chartMenu.destroy();
-  chartMenu = new Chart(document.getElementById('chartMenu'), {
-    type: 'doughnut',
-    data: {
-      labels: entries.map(e => e[0]),
-      datasets: [{ data: entries.map(e => e[1].amount),
-        backgroundColor: colors.slice(0, entries.length), borderWidth:0 }]
-    },
-    options:{ plugins:{ legend:{ labels:{ color:'#d8d9da', font:{ size:11 } } } } }
   });
 }
 
@@ -792,7 +779,10 @@ async function loadProdHistory() {
   try {
     const res  = await fetch(API + '?action=getProduction');
     const json = await res.json();
-    let data   = json.data || [];
+    prodRawData = json.data || [];
+    renderFlavorFilter();
+    renderProdTrendChart();
+    let data   = prodRawData.slice();
 
     // 생산시각 내림차순 정렬
     data.sort((a, b) => String(b['생산시각'] || '').localeCompare(String(a['생산시각'] || '')));
@@ -1119,11 +1109,10 @@ function deleteIngredient(idx) {
 // 초기화
 // ═══════════════════════════════════════════════════════════
 async function init() {
-  // 초기 탭: URL 해시 우선, 없으면 대시보드
+  // 초기 탭: URL 해시 우선, 없으면 생산 관리
   const initHash = location.hash.slice(1);
-  const startTab = TAB_IDX.hasOwnProperty(initHash) ? initHash : 'dash';
+  const startTab = TAB_IDX.hasOwnProperty(initHash) ? initHash : 'prod';
   switchTab(startTab);
-  if (startTab !== 'prod') loadProdHistory(); // prod가 아니면 미리 로드
 
   // API에서 최신 메타 로드 후 재렌더
   const updated = await loadMetaFromAPI();
@@ -1132,8 +1121,6 @@ async function init() {
     if (document.getElementById('tab-recipe').classList.contains('active')) renderRecipeTab();
     if (document.getElementById('tab-ingr').classList.contains('active'))   renderIngrTable();
   }
-
-  setInterval(loadDash, 300_000);
 }
 
 init();
