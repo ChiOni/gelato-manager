@@ -1012,7 +1012,9 @@ async function submitProduction() {
 const _phTimers = {};
 
 function _phRecipeOpts(optName, selRecipe) {
-  const opt = META.options.find(o => o.name === optName);
+  // 정확 일치 → 부분 일치 (이름 변경 대응)
+  let opt = META.options.find(o => o.name === optName);
+  if (!opt) opt = META.options.find(o => o.name.startsWith(optName) || optName.startsWith(o.name));
   const recipes = opt ? META.recipes.filter(r => r.optionId === opt.id) : [];
   return recipes.map(r =>
     `<option value="${r.name}" ${r.name === selRecipe ? 'selected' : ''}>${r.name}</option>`
@@ -1022,8 +1024,13 @@ function _phRecipeOpts(optName, selRecipe) {
 function _phRow(r) {
   const kst     = parseKST(String(r['생산시각'] || ''));
   const row     = r._row || '';
-  const curOpt  = String(r['옵션']    || '');
-  const curRec  = String(r['레시피']  || '');
+
+  // resolveRecipeFromRecord로 현재 META 기준 정규 이름 사용 (이름 변경 후에도 정확한 드롭다운 표시)
+  const resolvedRecipe = resolveRecipeFromRecord(r);
+  const resolvedOpt    = resolvedRecipe ? META.options.find(o => o.id === resolvedRecipe.optionId) : null;
+  const curOpt  = resolvedOpt    ? resolvedOpt.name    : String(r['옵션']   || '');
+  const curRec  = resolvedRecipe ? resolvedRecipe.name : String(r['레시피'] || '');
+
   const ni = (f, v, w, mn, mx) =>
     `<input class="ph-inp" data-field="${f}" type="number" value="${v}"
       min="${mn}" max="${mx}" style="width:${w}" onchange="scheduleProdSave('${row}')">`;
