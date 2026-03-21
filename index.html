@@ -698,39 +698,52 @@ function findOptBySheetName(flavorName) {
   return recipe ? META.options.find(o => o.id === recipe.optionId) : null;
 }
 
-// 저장된 레코드에서 현재 META 레시피 해결 (이름 변경에도 강건하게 매칭)
-// 전략: 레시피명 정확 일치 → 부분 일치 → 옵션명 정확 일치 → 옵션명 부분 일치
+// 저장된 레코드에서 현재 META 레시피 해결
+// 전략: ① ID 직접 조회(신규) → ② 레시피명 정확/부분 일치(구버전) → ③ 옵션ID/명 역추적(구구버전)
 function resolveRecipeFromRecord(r) {
-  const recipeName = String(r['레시피'] || '');
-  const optName    = String(r['옵션'] || r['맛'] || r['메뉴'] || '');
+  const recipeVal = String(r['레시피'] || '');
+  const optVal    = String(r['옵션'] || r['맛'] || r['메뉴'] || '');
 
-  // 1. 레시피명 정확 일치
-  if (recipeName) {
-    const m = META.recipes.find(rc => rc.name === recipeName);
+  // 0. ID 직접 조회 (신규 레코드 — 가장 우선)
+  if (recipeVal) {
+    const byId = META.recipes.find(rc => rc.id === recipeVal);
+    if (byId) return byId;
+  }
+  if (optVal) {
+    const optById = META.options.find(o => o.id === optVal);
+    if (optById) {
+      const m = META.recipes.find(rc => rc.optionId === optById.id);
+      if (m) return m;
+    }
+  }
+
+  // 1. 레시피명 정확 일치 (구버전 이름 저장 호환)
+  if (recipeVal) {
+    const m = META.recipes.find(rc => rc.name === recipeVal);
     if (m) return m;
   }
 
-  // 2. 레시피명 부분 일치 (이름 변경 대응: '바나나' ↔ '바나나 기본')
-  if (recipeName) {
+  // 2. 레시피명 부분 일치 (이름 변경 대응)
+  if (recipeVal) {
     const m = META.recipes.find(rc =>
-      rc.name.startsWith(recipeName) || recipeName.startsWith(rc.name)
+      rc.name.startsWith(recipeVal) || recipeVal.startsWith(rc.name)
     );
     if (m) return m;
   }
 
   // 3. 옵션명으로 레시피 찾기 (정확 일치)
-  if (optName) {
-    const opt = META.options.find(o => o.name === optName);
+  if (optVal) {
+    const opt = META.options.find(o => o.name === optVal);
     if (opt) {
       const m = META.recipes.find(rc => rc.optionId === opt.id);
       if (m) return m;
     }
   }
 
-  // 4. 옵션명 부분 일치 (이름 변경 대응: '바나나' ↔ '바나나 기본')
-  if (optName) {
+  // 4. 옵션명 부분 일치 (이름 변경 대응)
+  if (optVal) {
     const opt = META.options.find(o =>
-      o.name.startsWith(optName) || optName.startsWith(o.name)
+      o.name.startsWith(optVal) || optVal.startsWith(o.name)
     );
     if (opt) {
       const m = META.recipes.find(rc => rc.optionId === opt.id);
@@ -991,8 +1004,8 @@ async function submitProduction() {
   const params = new URLSearchParams({
     action: 'addProduction',
     time:    timeISO,
-    option:  opt.name,
-    recipe:  recipe.name,
+    option:  opt.id,
+    recipe:  recipe.id,
     batches
   });
 
@@ -1011,13 +1024,11 @@ async function submitProduction() {
 
 const _phTimers = {};
 
-function _phRecipeOpts(optName, selRecipe) {
-  // 정확 일치 → 부분 일치 (이름 변경 대응)
-  let opt = META.options.find(o => o.name === optName);
-  if (!opt) opt = META.options.find(o => o.name.startsWith(optName) || optName.startsWith(o.name));
-  const recipes = opt ? META.recipes.filter(r => r.optionId === opt.id) : [];
+// optId: 옵션 ID, selRecipeId: 선택된 레시피 ID
+function _phRecipeOpts(optId, selRecipeId) {
+  const recipes = META.recipes.filter(r => r.optionId === optId);
   return recipes.map(r =>
-    `<option value="${r.name}" ${r.name === selRecipe ? 'selected' : ''}>${r.name}</option>`
+    `<option value="${r.id}" ${r.id === selRecipeId ? 'selected' : ''}>${r.name}</option>`
   ).join('');
 }
 
@@ -1025,18 +1036,18 @@ function _phRow(r) {
   const kst     = parseKST(String(r['생산시각'] || ''));
   const row     = r._row || '';
 
-  // resolveRecipeFromRecord로 현재 META 기준 정규 이름 사용 (이름 변경 후에도 정확한 드롭다운 표시)
+  // ID로 현재 META 해석 (이름 변경과 무관하게 항상 정확한 드롭다운 표시)
   const resolvedRecipe = resolveRecipeFromRecord(r);
   const resolvedOpt    = resolvedRecipe ? META.options.find(o => o.id === resolvedRecipe.optionId) : null;
-  const curOpt  = resolvedOpt    ? resolvedOpt.name    : String(r['옵션']   || '');
-  const curRec  = resolvedRecipe ? resolvedRecipe.name : String(r['레시피'] || '');
+  const curOptId = resolvedOpt    ? resolvedOpt.id    : '';
+  const curRecId = resolvedRecipe ? resolvedRecipe.id : '';
 
   const ni = (f, v, w, mn, mx) =>
     `<input class="ph-inp" data-field="${f}" type="number" value="${v}"
       min="${mn}" max="${mx}" style="width:${w}" onchange="scheduleProdSave('${row}')">`;
 
   const optOpts = META.options.map(o =>
-    `<option value="${o.name}" ${o.name === curOpt ? 'selected' : ''}>${o.name}</option>`
+    `<option value="${o.id}" ${o.id === curOptId ? 'selected' : ''}>${o.name}</option>`
   ).join('');
 
   return `
@@ -1062,7 +1073,7 @@ function _phRow(r) {
     <td>
       <select class="ph-inp" data-field="recipe" id="phRec-${row}" style="max-width:110px"
         onchange="scheduleProdSave('${row}')">
-        ${_phRecipeOpts(curOpt, curRec)}
+        ${_phRecipeOpts(curOptId, curRecId)}
       </select>
     </td>
     <td style="text-align:center">
