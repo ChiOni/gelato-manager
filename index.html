@@ -698,18 +698,58 @@ function findOptBySheetName(flavorName) {
   return recipe ? META.options.find(o => o.id === recipe.optionId) : null;
 }
 
-// 레코드에서 옵션명 추출 (구 컬럼명 '맛' 폴백 + 레시피 역추적)
-function getFlavorFromRecord(r) {
-  // 신버전: '옵션', 구버전: '맛' 컬럼명 폴백
-  let name = String(r['옵션'] || r['맛'] || r['메뉴'] || '');
-  if (name) return name;
-  // 레시피 이름으로 역추적
+// 저장된 레코드에서 현재 META 레시피 해결 (이름 변경에도 강건하게 매칭)
+// 전략: 레시피명 정확 일치 → 부분 일치 → 옵션명 정확 일치 → 옵션명 부분 일치
+function resolveRecipeFromRecord(r) {
   const recipeName = String(r['레시피'] || '');
-  if (!recipeName) return '';
-  const recipe = META.recipes.find(rc => rc.name === recipeName);
-  if (!recipe) return recipeName; // 레시피 이름을 그대로 사용
-  const opt = META.options.find(o => o.id === recipe.optionId);
-  return opt ? opt.name : recipeName;
+  const optName    = String(r['옵션'] || r['맛'] || r['메뉴'] || '');
+
+  // 1. 레시피명 정확 일치
+  if (recipeName) {
+    const m = META.recipes.find(rc => rc.name === recipeName);
+    if (m) return m;
+  }
+
+  // 2. 레시피명 부분 일치 (이름 변경 대응: '바나나' ↔ '바나나 기본')
+  if (recipeName) {
+    const m = META.recipes.find(rc =>
+      rc.name.startsWith(recipeName) || recipeName.startsWith(rc.name)
+    );
+    if (m) return m;
+  }
+
+  // 3. 옵션명으로 레시피 찾기 (정확 일치)
+  if (optName) {
+    const opt = META.options.find(o => o.name === optName);
+    if (opt) {
+      const m = META.recipes.find(rc => rc.optionId === opt.id);
+      if (m) return m;
+    }
+  }
+
+  // 4. 옵션명 부분 일치 (이름 변경 대응: '바나나' ↔ '바나나 기본')
+  if (optName) {
+    const opt = META.options.find(o =>
+      o.name.startsWith(optName) || optName.startsWith(o.name)
+    );
+    if (opt) {
+      const m = META.recipes.find(rc => rc.optionId === opt.id);
+      if (m) return m;
+    }
+  }
+
+  return null;
+}
+
+// 레코드에서 현재 META 기준 정규 옵션명 반환 (이름 변경 후에도 일관성 유지)
+function getFlavorFromRecord(r) {
+  const recipe = resolveRecipeFromRecord(r);
+  if (recipe) {
+    const opt = META.options.find(o => o.id === recipe.optionId);
+    return opt ? opt.name : recipe.name;
+  }
+  // META에 없는 경우: 저장된 이름 그대로 사용
+  return String(r['옵션'] || r['맛'] || r['메뉴'] || '');
 }
 
 function renderFlavorFilter() {
@@ -797,10 +837,11 @@ function renderProdTrendChart() {
     const label = getPeriodLabel(String(r['생산시각']||''));
     if (!label) return;
 
-    const batches = parseInt(r['배치수']) || 1;
+    const recipe = resolveRecipeFromRecord(r);
+    const vol    = recipe ? batchVolume(recipe) * (parseInt(r['배치수'])||1) : 0;
 
     if (!periodMap[label]) periodMap[label] = {};
-    periodMap[label][optName] = (periodMap[label][optName] || 0) + batches;
+    periodMap[label][optName] = (periodMap[label][optName] || 0) + vol;
   });
 
   const periods = Object.keys(periodMap).sort((a, b) => {
@@ -836,11 +877,11 @@ function renderProdTrendChart() {
       responsive: true,
       plugins: {
         legend: { labels: { color:'#0F172A', font:{ size:12, family:"'PretendardVariable','Pretendard',sans-serif" } } },
-        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}배치` } }
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}g` } }
       },
       scales: {
         x: { stacked:true, ticks:{ color:'#64748B', font:{ size:12 } }, grid:{ color:'#E2E8F0' } },
-        y: { stacked:true, ticks:{ color:'#64748B', font:{ size:12 }, callback: v => v+'배치' }, grid:{ color:'#E2E8F0' } }
+        y: { stacked:true, ticks:{ color:'#64748B', font:{ size:12 }, callback: v => v>=1000?(v/1000).toFixed(1)+'kg':v+'g' }, grid:{ color:'#E2E8F0' } }
       }
     }
   });
