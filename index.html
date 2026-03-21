@@ -797,11 +797,10 @@ function renderProdTrendChart() {
     const label = getPeriodLabel(String(r['생산시각']||''));
     if (!label) return;
 
-    const recipe = META.recipes.find(rc => rc.name === String(r['레시피']||''));
-    const vol    = recipe ? batchVolume(recipe) * (parseInt(r['배치수'])||1) : 0;
+    const batches = parseInt(r['배치수']) || 1;
 
     if (!periodMap[label]) periodMap[label] = {};
-    periodMap[label][optName] = (periodMap[label][optName] || 0) + vol;
+    periodMap[label][optName] = (periodMap[label][optName] || 0) + batches;
   });
 
   const periods = Object.keys(periodMap).sort((a, b) => {
@@ -837,11 +836,11 @@ function renderProdTrendChart() {
       responsive: true,
       plugins: {
         legend: { labels: { color:'#0F172A', font:{ size:12, family:"'PretendardVariable','Pretendard',sans-serif" } } },
-        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}g` } }
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}배치` } }
       },
       scales: {
         x: { stacked:true, ticks:{ color:'#64748B', font:{ size:12 } }, grid:{ color:'#E2E8F0' } },
-        y: { stacked:true, ticks:{ color:'#64748B', font:{ size:12 }, callback: v => v>=1000?(v/1000).toFixed(1)+'kg':v+'g' }, grid:{ color:'#E2E8F0' } }
+        y: { stacked:true, ticks:{ color:'#64748B', font:{ size:12 }, callback: v => v+'배치' }, grid:{ color:'#E2E8F0' } }
       }
     }
   });
