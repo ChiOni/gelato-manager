@@ -688,13 +688,25 @@ function getPeriodLabel(timeStr) {
   return `${d.getMonth()+1}월${weekNum}주`;
 }
 
+// 시트 저장 이름(구 이름 '바나나' 포함)으로 옵션/색상 찾기
+function findOptBySheetName(flavorName) {
+  // 1. 정확히 일치
+  let opt = META.options.find(o => o.name === flavorName);
+  if (opt) return opt;
+  // 2. 레시피 이름으로 역추적 (구 이름이 레시피명 접두어인 경우)
+  const recipe = META.recipes.find(rc =>
+    rc.name === flavorName || rc.name.startsWith(flavorName + ' ') || flavorName.startsWith(rc.name.split(' ')[0])
+  );
+  return recipe ? META.options.find(o => o.id === recipe.optionId) : null;
+}
+
 function renderFlavorFilter() {
   const container = document.getElementById('flavorCheckboxList');
   if (!container) return;
   const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
   if (!prodTrendFlavorFilter) prodTrendFlavorFilter = new Set(allFlavors);
   container.innerHTML = allFlavors.map(f => {
-    const opt = META.options.find(o => o.name === f);
+    const opt = findOptBySheetName(f);
     const color = opt ? opt.color : '#5794f2';
     const checked = prodTrendFlavorFilter.has(f);
     return `<div class="filter-item" onclick="toggleFlavorFilter('${f}',${!checked})">
@@ -774,8 +786,8 @@ function renderProdTrendChart() {
     const label = getPeriodLabel(String(r['생산시각']||''));
     if (!label) return;
 
-    const opt    = META.options.find(o => o.name === optName);
-    const recipe = opt ? META.recipes.find(rc => rc.optionId === opt.id && rc.name === String(r['레시피']||'')) : null;
+    // 레시피 이름으로 직접 찾기 (옵션 이름 변경 후 하위 호환)
+    const recipe = META.recipes.find(rc => rc.name === String(r['레시피']||''));
     const vol    = recipe ? batchVolume(recipe) * (parseInt(r['배치수'])||1) : 0;
 
     if (!periodMap[label]) periodMap[label] = {};
@@ -794,7 +806,7 @@ function renderProdTrendChart() {
   const flavors    = allFlavors.filter(f => prodTrendFlavorFilter && prodTrendFlavorFilter.has(f));
 
   const datasets = flavors.map(f => {
-    const opt = META.options.find(o => o.name === f);
+    const opt = findOptBySheetName(f);
     return {
       label: f,
       data: periods.map(p => (periodMap[p]&&periodMap[p][f]) || 0),
