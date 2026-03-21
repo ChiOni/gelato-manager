@@ -690,20 +690,32 @@ function getPeriodLabel(timeStr) {
 
 // 시트 저장 이름(구 이름 '바나나' 포함)으로 옵션/색상 찾기
 function findOptBySheetName(flavorName) {
-  // 1. 정확히 일치
   let opt = META.options.find(o => o.name === flavorName);
   if (opt) return opt;
-  // 2. 레시피 이름으로 역추적 (구 이름이 레시피명 접두어인 경우)
   const recipe = META.recipes.find(rc =>
     rc.name === flavorName || rc.name.startsWith(flavorName + ' ') || flavorName.startsWith(rc.name.split(' ')[0])
   );
   return recipe ? META.options.find(o => o.id === recipe.optionId) : null;
 }
 
+// 레코드에서 옵션명 추출 (구 컬럼명 '맛' 폴백 + 레시피 역추적)
+function getFlavorFromRecord(r) {
+  // 신버전: '옵션', 구버전: '맛' 컬럼명 폴백
+  let name = String(r['옵션'] || r['맛'] || r['메뉴'] || '');
+  if (name) return name;
+  // 레시피 이름으로 역추적
+  const recipeName = String(r['레시피'] || '');
+  if (!recipeName) return '';
+  const recipe = META.recipes.find(rc => rc.name === recipeName);
+  if (!recipe) return recipeName; // 레시피 이름을 그대로 사용
+  const opt = META.options.find(o => o.id === recipe.optionId);
+  return opt ? opt.name : recipeName;
+}
+
 function renderFlavorFilter() {
   const container = document.getElementById('flavorCheckboxList');
   if (!container) return;
-  const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
+  const allFlavors = [...new Set(prodRawData.map(r => getFlavorFromRecord(r)).filter(Boolean))];
   if (!prodTrendFlavorFilter) prodTrendFlavorFilter = new Set(allFlavors);
   container.innerHTML = allFlavors.map(f => {
     const opt = findOptBySheetName(f);
@@ -738,7 +750,7 @@ function toggleFlavorDropdown(e) {
 
 function selectAllFlavors(e) {
   e.stopPropagation();
-  const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
+  const allFlavors = [...new Set(prodRawData.map(r => getFlavorFromRecord(r)).filter(Boolean))];
   prodTrendFlavorFilter = new Set(allFlavors);
   renderFlavorFilter();
   renderProdTrendChart();
@@ -775,18 +787,16 @@ function closeAddProdModal() {
 }
 
 function renderProdTrendChart() {
-  const START = new Date('2026-03-01');
   const periodMap = {};
 
   prodRawData.forEach(r => {
     const d = parseDateOnly(String(r['생산시각']||''));
-    if (!d || d < START) return;
-    const optName = String(r['옵션']||'');
+    if (!d) return;
+    const optName = getFlavorFromRecord(r);
     if (!optName) return;
     const label = getPeriodLabel(String(r['생산시각']||''));
     if (!label) return;
 
-    // 레시피 이름으로 직접 찾기 (옵션 이름 변경 후 하위 호환)
     const recipe = META.recipes.find(rc => rc.name === String(r['레시피']||''));
     const vol    = recipe ? batchVolume(recipe) * (parseInt(r['배치수'])||1) : 0;
 
@@ -802,7 +812,7 @@ function renderProdTrendChart() {
     return a.localeCompare(b);
   });
 
-  const allFlavors = [...new Set(prodRawData.map(r => String(r['옵션']||'')).filter(Boolean))];
+  const allFlavors = [...new Set(prodRawData.map(r => getFlavorFromRecord(r)).filter(Boolean))];
   const flavors    = allFlavors.filter(f => prodTrendFlavorFilter && prodTrendFlavorFilter.has(f));
 
   const datasets = flavors.map(f => {
