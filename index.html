@@ -43,7 +43,7 @@ body {
   color: var(--text);
   font-family: 'PretendardVariable', 'Pretendard', -apple-system, BlinkMacSystemFont,
                'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
@@ -63,7 +63,7 @@ body {
   color: var(--muted);
   cursor: pointer;
   padding: 16px 20px;
-  font-size: 14px; font-weight: 500;
+  font-size: 15px; font-weight: 500;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color .15s;
@@ -85,7 +85,7 @@ body {
   box-shadow: var(--sh-xs);
 }
 .card-title {
-  font-size: 11px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   color: var(--muted);
   text-transform: uppercase; letter-spacing: .06em;
   margin-bottom: 16px;
@@ -93,22 +93,22 @@ body {
 
 /* ════ Segmented Control ════════════════════════════════ */
 .seg-ctrl { display:flex; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:3px; }
-.seg-btn  { background:none; border:none; padding:5px 18px; border-radius:6px; font-size:13px; font-weight:500; color:var(--muted); cursor:pointer; transition:all .2s; }
+.seg-btn  { background:none; border:none; padding:6px 20px; border-radius:6px; font-size:14px; font-weight:500; color:var(--muted); cursor:pointer; transition:all .2s; }
 .seg-btn.active { background:var(--surface); color:var(--accent); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
 /* ════ Flavor Filter Dropdown ═══════════════════════════ */
 .filter-wrap { position:relative; }
-.filter-btn  { display:flex; align-items:center; gap:5px; background:var(--surface); border:1px solid var(--border-2); border-radius:var(--r-sm); padding:6px 12px; font-size:13px; font-weight:500; color:var(--text); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.filter-btn  { display:flex; align-items:center; gap:5px; background:var(--surface); border:1px solid var(--border-2); border-radius:var(--r-sm); padding:6px 12px; font-size:14px; font-weight:500; color:var(--text); cursor:pointer; transition:all .15s; white-space:nowrap; }
 .filter-btn:hover { border-color:var(--accent); color:var(--accent); }
 .filter-panel { position:absolute; top:calc(100% + 6px); right:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--sh-md); min-width:180px; z-index:200; overflow:hidden; }
 .filter-panel-hdr { padding:10px 14px 8px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
 .filter-all-btn { font-size:11px; color:var(--accent); background:none; border:none; cursor:pointer; font-weight:600; }
-.filter-item { display:flex; align-items:center; gap:8px; padding:8px 14px; cursor:pointer; transition:background .1s; font-size:13px; }
+.filter-item { display:flex; align-items:center; gap:8px; padding:9px 14px; cursor:pointer; transition:background .1s; font-size:14px; }
 .filter-item:hover { background:var(--bg); }
 
 /* ════ Production Steps ═════════════════════════════════ */
 .step-label {
-  font-size: 11px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   color: var(--muted);
   text-transform: uppercase; letter-spacing: .06em;
   margin-bottom: 12px;
@@ -132,7 +132,7 @@ body {
   border-radius: var(--r-sm);
   padding: 14px 16px;
   cursor: pointer; transition: all .15s;
-  text-align: center; font-size: 13px;
+  text-align: center; font-size: 14px;
 }
 .option-card:hover   { border-color: var(--accent); background: var(--accent-bg); }
 .option-card.selected { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
@@ -151,7 +151,7 @@ body {
 }
 .recipe-item:hover    { border-color: var(--accent); background: var(--accent-bg); }
 .recipe-item.selected { border-color: var(--accent); background: var(--accent-bg); }
-.recipe-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.recipe-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
 
 .ingredient-preview { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .ing-tag {
@@ -174,7 +174,7 @@ body {
 .btn {
   border: none; border-radius: var(--r-sm);
   padding: 9px 18px; cursor: pointer;
-  font-size: 13px; font-weight: 600;
+  font-size: 14px; font-weight: 600;
   transition: all .15s; letter-spacing: -.01em;
   white-space: nowrap;
 }
@@ -185,7 +185,7 @@ body {
 .btn-ghost:hover      { border-color: var(--text); color: var(--text); background: var(--bg); }
 .btn-danger           { background: var(--red); color: #fff; }
 .btn-danger:hover     { opacity: .88; }
-.btn-sm               { padding: 5px 11px; font-size: 12px; border-radius: 6px; }
+.btn-sm               { padding: 5px 12px; font-size: 13px; border-radius: 6px; }
 
 /* ════ Recipe Management ════════════════════════════════ */
 .mgmt-layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; }
@@ -193,17 +193,17 @@ body {
 .option-sidebar { display: flex; flex-direction: column; gap: 4px; }
 .sidebar-item {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-sm); padding: 10px 14px; cursor: pointer;
+  border-radius: var(--r-sm); padding: 11px 14px; cursor: pointer;
   display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 500; transition: all .15s;
+  font-size: 14px; font-weight: 500; transition: all .15s;
 }
 .sidebar-item:hover    { border-color: var(--accent); background: var(--accent-bg); }
 .sidebar-item.selected { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
 .sidebar-add {
   text-align: center; color: var(--muted);
   border: 1.5px dashed var(--border-2);
-  border-radius: var(--r-sm); padding: 10px; cursor: pointer;
-  font-size: 13px; font-weight: 500; transition: all .15s; margin-top: 4px;
+  border-radius: var(--r-sm); padding: 11px; cursor: pointer;
+  font-size: 14px; font-weight: 500; transition: all .15s; margin-top: 4px;
 }
 .sidebar-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
 
@@ -226,7 +226,7 @@ body {
 .ph-inp {
   background: transparent; border: 1px solid transparent;
   color: var(--text); border-radius: 5px;
-  padding: 4px 6px; font-size: 13px; text-align: center;
+  padding: 4px 6px; font-size: 14px; text-align: center;
   transition: all .15s; font-family: inherit; cursor: default;
 }
 .ph-inp:hover  { border-color: var(--border); background: var(--inp); cursor: text; }
@@ -238,22 +238,22 @@ body {
 #prodHistory select.ph-inp { text-align: left; cursor: pointer; }
 
 .ing-row   { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-.ing-select { background: var(--inp); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; min-width: 150px; font-size: 13px; }
+.ing-select { background: var(--inp); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; min-width: 150px; font-size: 14px; }
 .ing-qty    { background: var(--inp); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; width: 80px; }
-.recipe-cost { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.recipe-cost { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
 
 /* ════ Table ════════════════════════════════════════════ */
 table { width: 100%; border-collapse: collapse; }
 th {
   background: var(--bg); color: var(--muted);
-  font-size: 11px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .05em;
-  padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border);
+  padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--border);
 }
-td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 14px; }
 tr:last-child td { border-bottom: none; }
 tr:hover td      { background: var(--bg); }
-.cell-input { background: transparent; border: none; color: var(--text); width: 100%; font-size: 13px; padding: 2px 0; }
+.cell-input { background: transparent; border: none; color: var(--text); width: 100%; font-size: 14px; padding: 2px 0; }
 .cell-input:focus { outline: 1.5px solid var(--accent); border-radius: 4px; background: var(--accent-bg); padding: 2px 6px; }
 
 /* ════ Misc ═════════════════════════════════════════════ */
@@ -265,11 +265,11 @@ tr:hover td      { background: var(--bg); }
   z-index: 9999; opacity: 0;
   transform: translateY(8px);
   transition: opacity .2s, transform .2s;
-  font-size: 13px; font-weight: 500;
+  font-size: 14px; font-weight: 500;
   box-shadow: var(--sh-md); pointer-events: none;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
-.empty      { color: var(--muted); text-align: center; padding: 48px; font-size: 13px; }
+.empty      { color: var(--muted); text-align: center; padding: 48px; font-size: 14px; }
 .section-hdr    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-hdr h3 { font-size: 15px; font-weight: 700; }
 input[type=number] { -moz-appearance: textfield; }
@@ -284,7 +284,7 @@ select, input   { font-family: inherit; }
 .modal-overlay.show { display: flex; }
 .modal-box          { background: var(--surface); border-radius: 16px; padding: 28px; min-width: 300px; box-shadow: 0 20px 60px rgba(0,0,0,.14); }
 .modal-box h4       { margin-bottom: 16px; font-size: 16px; font-weight: 700; }
-.modal-select       { width: 100%; background: var(--inp); border: 1.5px solid var(--border); color: var(--text); border-radius: var(--r-sm); padding: 10px 12px; font-size: 13px; margin-bottom: 16px; }
+.modal-select       { width: 100%; background: var(--inp); border: 1.5px solid var(--border); color: var(--text); border-radius: var(--r-sm); padding: 10px 12px; font-size: 14px; margin-bottom: 16px; }
 .modal-btns         { display: flex; gap: 8px; justify-content: flex-end; }
 </style>
 </head>
@@ -450,7 +450,7 @@ select, input   { font-family: inherit; }
 // CONFIG & STATE
 // ═══════════════════════════════════════════════════════════
 const API    = 'https://script.google.com/macros/s/AKfycbxgye70JFDlNUPNtokT2N60hqcor5Pl5ZomQvCoPu203OSnfb6HyItrn-Pqt-BeAIwj/exec';
-const LS_KEY = 'gelato_metadata_v3';
+const LS_KEY = 'gelato_metadata_v4';
 
 const DEFAULT_METADATA = {
   ingredients: [
@@ -473,14 +473,14 @@ const DEFAULT_METADATA = {
     {id:'i17', name:'추가 재료(초코)', unit:'식', price:993.0,  url:''},
   ],
   options: [
-    {id:'o01', name:'바나나',       color:'#fade2a'},
-    {id:'o02', name:'생크림밀크',   color:'#5794f2'},
-    {id:'o03', name:'레몬요거트',   color:'#73bf69'},
-    {id:'o04', name:'호지차한라봉', color:'#ff9830'},
-    {id:'o05', name:'아몬드',       color:'#b877d9'},
-    {id:'o06', name:'말차',         color:'#a0d898'},
-    {id:'o07', name:'딸기소르베',   color:'#f2495c'},
-    {id:'o08', name:'초코',         color:'#c67e3a'},
+    {id:'o01', name:'바나나 기본',       color:'#fade2a'},
+    {id:'o02', name:'생크림밀크 기본',   color:'#5794f2'},
+    {id:'o03', name:'레몬요거트 기본',   color:'#73bf69'},
+    {id:'o04', name:'호지차한라봉 기본', color:'#ff9830'},
+    {id:'o05', name:'아몬드 기본',       color:'#b877d9'},
+    {id:'o06', name:'말차 기본',         color:'#a0d898'},
+    {id:'o07', name:'딸기소르베 기본',   color:'#f2495c'},
+    {id:'o08', name:'초코 기본',         color:'#c67e3a'},
   ],
   recipes: [
     {id:'r01', optionId:'o01', name:'바나나 기본',
@@ -699,7 +699,6 @@ function renderFlavorFilter() {
     const checked = prodTrendFlavorFilter.has(f);
     return `<div class="filter-item" onclick="toggleFlavorFilter('${f}',${!checked})">
       <input type="checkbox" ${checked ? 'checked' : ''} style="accent-color:${color};pointer-events:none">
-      <span class="option-dot" style="background:${color}"></span>
       <span>${f}</span>
     </div>`;
   }).join('');
