@@ -286,6 +286,60 @@ select, input   { font-family: inherit; }
 .modal-box h4       { margin-bottom: 16px; font-size: 16px; font-weight: 700; }
 .modal-select       { width: 100%; background: var(--inp); border: 1.5px solid var(--border); color: var(--text); border-radius: var(--r-sm); padding: 10px 12px; font-size: 14px; margin-bottom: 16px; }
 .modal-btns         { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ════ Research Recipe System ══════════════════════════════ */
+.base-recipe-section  { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r); padding: 20px 24px; box-shadow: var(--sh-xs); margin-bottom: 16px; }
+.base-recipe-header   { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.base-badge   { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .6px; padding: 3px 8px; border-radius: 4px; flex-shrink:0; }
+.archive-badge{ background: var(--border); color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .6px; padding: 3px 8px; border-radius: 4px; }
+.research-section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.research-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r); padding: 20px 24px; box-shadow: var(--sh-xs); margin-bottom: 12px; }
+.research-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.research-card-title  { font-size: 15px; font-weight: 700; color: var(--text); }
+.status-badge   { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; flex-shrink:0; }
+.status-ongoing { background: #EFF6FF; color: #1d4ed8; }
+.status-success { background: #F0FDF4; color: #166534; }
+.status-fail    { background: #FFF1F2; color: #9f1239; }
+.status-adopted { background: #F5F3FF; color: #6d28d9; }
+.delta-table    { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0 10px; }
+.delta-table th { color: var(--muted); font-weight: 600; font-size: 11px; text-align: left; padding: 4px 12px 6px 0; border-bottom: 1px solid var(--border); }
+.delta-table td { padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); }
+.delta-table tr:last-child td { border-bottom: none; }
+.delta-pos { color: #16a34a; font-weight: 600; }
+.delta-neg { color: #dc2626; font-weight: 600; }
+.delta-neu { color: var(--muted); }
+.source-chip      { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; font-size: 12px; color: var(--accent); text-decoration: none; margin-right: 6px; margin-bottom: 4px; }
+.source-chip:hover{ background: var(--accent-bg); }
+.hyp-label { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; margin-bottom: 4px; }
+.hyp-text  { font-size: 13px; color: var(--text); line-height: 1.55; }
+.archive-list { margin-top: 4px; }
+.archive-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+.archive-item:last-child { border-bottom: none; }
+/* Research Modal */
+.research-modal-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 800px) { .research-modal-grid { grid-template-columns: 1fr; } }
+.modal-section-title  { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.modal-field       { margin-bottom: 14px; }
+.modal-field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+.modal-inp     { width: 100%; background: var(--inp); border: 1.5px solid var(--border); color: var(--text); border-radius: var(--r-sm); padding: 8px 12px; font-size: 14px; font-family: inherit; box-sizing: border-box; transition: border-color .15s; }
+.modal-inp:focus { outline: none; border-color: var(--accent); }
+.modal-textarea  { resize: vertical; min-height: 78px; line-height: 1.5; }
+.src-row      { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.src-type-sel { background: var(--inp); border: 1.5px solid var(--border); color: var(--text); border-radius: var(--r-sm); padding: 6px 8px; font-size: 12px; font-family: inherit; flex-shrink: 0; }
+.delta-inp-tbl    { width: 100%; border-collapse: collapse; font-size: 13px; }
+.delta-inp-tbl th { font-size: 11px; font-weight: 700; color: var(--muted); text-align: right; padding: 4px 0 8px; border-bottom: 1px solid var(--border); }
+.delta-inp-tbl th:first-child { text-align: left; }
+.delta-inp-tbl td { padding: 5px 0; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: right; }
+.delta-inp-tbl td:first-child { text-align: left; }
+.delta-inp-tbl tr:last-child td { border-bottom: none; }
+.di       { width: 72px; background: var(--inp); border: 1.5px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px 8px; font-size: 13px; font-family: inherit; text-align: right; transition: all .15s; }
+.di:focus { outline: none; border-color: var(--accent); }
+.di.pos   { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
+.di.neg   { border-color: #dc2626; background: #fff1f2; color: #dc2626; }
+.res-qty     { font-weight: 700; }
+.res-qty.pos { color: #16a34a; }
+.res-qty.neg { color: #dc2626; }
+.research-cost-bar { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 14px; font-size: 13px; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -430,6 +484,93 @@ select, input   { font-family: inherit; }
   </div>
 </div>
 
+<!-- research modal -->
+<div class="modal-overlay" id="researchModal">
+  <div class="modal-box" style="width:860px;max-width:97vw;max-height:92vh;overflow-y:auto;padding:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h4 id="rmTitle" style="margin:0">연구 레시피 추가</h4>
+      <button class="btn btn-ghost btn-sm" onclick="closeResearchModal()">✕</button>
+    </div>
+    <div class="research-modal-grid">
+      <!-- 왼쪽: 가설 -->
+      <div>
+        <div class="modal-section-title">가설 (Hypothesis)</div>
+        <div class="modal-field">
+          <label>제목 *</label>
+          <input class="modal-inp" id="rm-title" placeholder="예: 생크림 증량으로 텍스처 개선">
+        </div>
+        <div class="modal-field">
+          <label>이유 — 왜 이 변경이 효과적이라고 생각하나요?</label>
+          <textarea class="modal-inp modal-textarea" id="rm-reason" placeholder="식품과학적 근거, 경험, 직관 등을 자유롭게 작성"></textarea>
+        </div>
+        <div class="modal-field">
+          <label>출처 자료</label>
+          <div id="rm-sources-list" style="margin-bottom:8px"></div>
+          <div class="src-row">
+            <select class="src-type-sel" id="rm-src-type">
+              <option value="paper">📄 논문</option>
+              <option value="blog">🔗 블로그</option>
+              <option value="book">📚 책</option>
+              <option value="other">📎 기타</option>
+            </select>
+            <input class="modal-inp" id="rm-src-title" placeholder="제목" style="flex:1;min-width:80px">
+            <input class="modal-inp" id="rm-src-url" placeholder="URL (선택)" style="flex:1;min-width:80px">
+            <button class="btn btn-ghost btn-sm" onclick="rmAddSource()" style="flex-shrink:0">추가</button>
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>결과 메모</label>
+          <textarea class="modal-inp modal-textarea" id="rm-result" placeholder="실험 후 관찰한 내용, 맛/텍스처 변화 등" style="min-height:60px"></textarea>
+        </div>
+        <div class="modal-field">
+          <label>상태</label>
+          <select class="modal-inp" id="rm-status">
+            <option value="ongoing">🔬 진행중</option>
+            <option value="success">✅ 성공</option>
+            <option value="fail">❌ 실패</option>
+          </select>
+        </div>
+      </div>
+      <!-- 오른쪽: 재료 조정 -->
+      <div>
+        <div class="modal-section-title">재료 조정</div>
+        <div id="rm-base-label" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+        <div style="overflow-x:auto">
+          <table class="delta-inp-tbl">
+            <thead>
+              <tr>
+                <th style="text-align:left">재료</th>
+                <th>기본량</th>
+                <th>조정 (±)</th>
+                <th>최종량</th>
+              </tr>
+            </thead>
+            <tbody id="rm-delta-body"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="rmAddExtraIngredient()">+ 새 재료 추가</button>
+        <div class="research-cost-bar" id="rm-cost-bar">—</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost" onclick="closeResearchModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveResearchRecipe()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- promote confirm modal -->
+<div class="modal-overlay" id="promoteModal">
+  <div class="modal-box" style="max-width:440px">
+    <h4>기본 레시피로 승격</h4>
+    <p id="promoteMsg" style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px"></p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closePromoteModal()">취소</button>
+      <button class="btn btn-primary" onclick="confirmPromote()">승격 확정</button>
+    </div>
+  </div>
+</div>
+
 <!-- copy modal -->
 <div class="modal-overlay" id="copyModal">
   <div class="modal-box">
@@ -483,21 +624,21 @@ const DEFAULT_METADATA = {
     {id:'o08', name:'초코 기본',         color:'#c67e3a'},
   ],
   recipes: [
-    {id:'r01', optionId:'o01', name:'바나나 기본',
+    {id:'r01', optionId:'o01', name:'바나나 기본', type:'base', version:null,
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i08',qty:450}]},
-    {id:'r02', optionId:'o02', name:'생크림밀크 기본',
+    {id:'r02', optionId:'o02', name:'생크림밀크 기본', type:'base', version:null,
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:755.4},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25}]},
-    {id:'r03', optionId:'o03', name:'레몬요거트 기본',
+    {id:'r03', optionId:'o03', name:'레몬요거트 기본', type:'base', version:null,
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i09',qty:375},{id:'i10',qty:150}]},
-    {id:'r04', optionId:'o04', name:'호지차한라봉 기본',
+    {id:'r04', optionId:'o04', name:'호지차한라봉 기본', type:'base', version:null,
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:230},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i11',qty:30},{id:'i12',qty:75}]},
-    {id:'r05', optionId:'o05', name:'아몬드 기본',
+    {id:'r05', optionId:'o05', name:'아몬드 기본', type:'base', version:null,
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:276},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i13',qty:225}]},
-    {id:'r06', optionId:'o06', name:'말차 기본',
+    {id:'r06', optionId:'o06', name:'말차 기본', type:'base', version:null,
      ingredients:[{id:'i01',qty:1500},{id:'i02',qty:277.5},{id:'i03',qty:66},{id:'i04',qty:230},{id:'i05',qty:42.9},{id:'i06',qty:82.35},{id:'i07',qty:11.25},{id:'i14',qty:195}]},
-    {id:'r07', optionId:'o07', name:'딸기소르베 기본',
+    {id:'r07', optionId:'o07', name:'딸기소르베 기본', type:'base', version:null,
      ingredients:[{id:'i15',qty:1500},{id:'i04',qty:345},{id:'i05',qty:64.35},{id:'i06',qty:123.525},{id:'i07',qty:16.875}]},
-    {id:'r08', optionId:'o08', name:'초코 기본',
+    {id:'r08', optionId:'o08', name:'초코 기본', type:'base', version:null,
      ingredients:[{id:'i16',qty:2850},{id:'i17',qty:1}]},
   ]
 };
@@ -927,22 +1068,30 @@ function renderProdStep2() {
   const step3 = document.getElementById('prodStep3');
   if (!selOptionId) { step2.style.display = 'none'; step3.style.display = 'none'; return; }
 
-  const recipes = META.recipes.filter(r => r.optionId === selOptionId);
+  // archived base 제외, base 먼저 → research 순서
+  const recipes = META.recipes
+    .filter(r => r.optionId === selOptionId && !r.version)
+    .sort((a, b) => (a.type === 'base' ? 0 : 1) - (b.type === 'base' ? 0 : 1));
   if (!recipes.length) { step2.style.display = 'none'; step3.style.display = 'none'; return; }
 
   step2.style.display = 'block';
   const list = document.getElementById('prodRecipeList');
   list.innerHTML = '';
   recipes.forEach(recipe => {
-    const cost   = recipeCost(recipe);
-    const vol    = batchVolume(recipe);
-    const per120 = vol ? Math.round(cost / vol * 120) : 0;
-    const div    = document.createElement('div');
-    div.className = 'recipe-item' + (recipe.id === selRecipeId ? ' selected' : '');
-    div.innerHTML = `
+    const cost      = recipeCost(recipe);
+    const vol       = batchVolume(recipe);
+    const per120    = vol ? Math.round(cost / vol * 120) : 0;
+    const isRes     = recipe.type === 'research';
+    const label     = (recipe.hypothesis?.title) || recipe.name;
+    const div       = document.createElement('div');
+    div.className   = 'recipe-item' + (recipe.id === selRecipeId ? ' selected' : '');
+    div.innerHTML   = `
       <div>
-        <div>${recipe.name}</div>
-        <div class="recipe-meta">배치 용량 ${vol.toLocaleString()}g &nbsp;·&nbsp; 배치원가 ${fmt(cost)} &nbsp;·&nbsp; 120g당 ${per120}원</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${isRes ? '<span style="font-size:10px;background:#EFF6FF;color:#1d4ed8;padding:2px 6px;border-radius:4px;font-weight:700">연구</span>' : ''}
+          <span>${label}</span>
+        </div>
+        <div class="recipe-meta">배치 ${vol.toLocaleString()}g &nbsp;·&nbsp; 원가 ${fmt(cost)} &nbsp;·&nbsp; 120g당 ${per120}원</div>
       </div>
       <span style="color:var(--muted);font-size:18px">›</span>`;
     div.onclick = () => selectProdRecipe(recipe.id);
@@ -1161,6 +1310,106 @@ async function deleteProdRow(row) {
 // ═══════════════════════════════════════════════════════════
 // 탭 3: 레시피 관리
 // ═══════════════════════════════════════════════════════════
+
+// ── 마이그레이션: 기존 레시피에 type:'base' 추가 ──────────
+function migrateRecipeTypes() {
+  let changed = false;
+  META.recipes.forEach(r => {
+    if (!r.type) { r.type = 'base'; changed = true; }
+    if (r.type === 'base' && r.version === undefined) { r.version = null; changed = true; }
+  });
+  if (changed) persistMeta();
+}
+
+// ── 데이터 헬퍼 ───────────────────────────────────────────
+function getBaseRecipe(optionId) {
+  return META.recipes.find(r => r.optionId === optionId && r.type === 'base' && !r.version) || null;
+}
+function getArchivedBases(optionId) {
+  return META.recipes
+    .filter(r => r.optionId === optionId && r.type === 'base' && r.version)
+    .sort((a, b) => b.version - a.version);
+}
+function getResearchRecipes(optionId) {
+  return META.recipes.filter(r => r.optionId === optionId && r.type === 'research');
+}
+
+// ── 델타 계산 (changed ingredients only) ─────────────────
+function computeDeltas(resRecipe, baseRecipe) {
+  if (!baseRecipe) return [];
+  const allIds = new Set([
+    ...baseRecipe.ingredients.map(ri => ri.id),
+    ...resRecipe.ingredients.map(ri => ri.id)
+  ]);
+  const result = [];
+  for (const ingId of allIds) {
+    const ing     = getIngr(ingId);
+    const baseQty = baseRecipe.ingredients.find(ri => ri.id === ingId)?.qty || 0;
+    const resQty  = resRecipe.ingredients.find(ri => ri.id === ingId)?.qty  || 0;
+    const delta   = resQty - baseQty;
+    if (Math.abs(delta) > 0.001) {
+      result.push({ ingId, name: ing?.name || ingId, unit: ing?.unit || '', baseQty, resQty, delta });
+    }
+  }
+  return result;
+}
+
+// ── 승격 ─────────────────────────────────────────────────
+let _promotingId = null;
+function openPromoteModal(researchId) {
+  const r    = getRecipe(researchId);
+  if (!r) return;
+  const base = getBaseRecipe(r.optionId);
+  const arcs = getArchivedBases(r.optionId);
+  const nextV = arcs.length ? Math.max(...arcs.map(a => a.version)) + 1 : 1;
+  const title = r.hypothesis?.title || r.name;
+  const baseName = base ? base.name.replace(/_v\d+$/, '') : '';
+  document.getElementById('promoteMsg').innerHTML =
+    `<strong>"${title}"</strong>을 기본 레시피로 승격합니다.<br><br>` +
+    (base ? `현재 기본 레시피 <strong>"${baseName}"</strong>는 <strong>"${baseName}_v${nextV}"</strong>으로 보관됩니다.` : '');
+  _promotingId = researchId;
+  document.getElementById('promoteModal').classList.add('show');
+}
+function closePromoteModal() {
+  document.getElementById('promoteModal').classList.remove('show');
+  _promotingId = null;
+}
+function confirmPromote() {
+  const r = getRecipe(_promotingId);
+  if (!r) { closePromoteModal(); return; }
+  const optionId = r.optionId;
+  const base     = getBaseRecipe(optionId);
+  const arcs     = getArchivedBases(optionId);
+  const nextV    = arcs.length ? Math.max(...arcs.map(a => a.version)) + 1 : 1;
+  // 현재 base 아카이브
+  if (base) {
+    const stripped = base.name.replace(/_v\d+$/, '');
+    base.name       = stripped + `_v${nextV}`;
+    base.version    = nextV;
+    base.archivedAt = new Date().toISOString().slice(0, 10);
+  }
+  // 연구 레시피 → base 승격
+  r.type    = 'base';
+  r.version = null;
+  delete r.archivedAt;
+  if (r.hypothesis) r.hypothesis.status = 'adopted';
+  persistMeta();
+  closePromoteModal();
+  renderRecipeEditor();
+  showToast('기본 레시피로 승격되었습니다.');
+}
+
+// ── 아카이브 토글 ─────────────────────────────────────────
+function toggleArchive(optionId) {
+  const el = document.getElementById('arc-' + optionId);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── STATUS 상수 ───────────────────────────────────────────
+const STATUS_LABEL = { ongoing:'🔬 진행중', success:'✅ 성공', fail:'❌ 실패', adopted:'⭐ 기본 반영됨' };
+const STATUS_CLS   = { ongoing:'status-ongoing', success:'status-success', fail:'status-fail', adopted:'status-adopted' };
+
 function renderRecipeTab() {
   renderOptionSidebar();
   renderRecipeEditor();
@@ -1192,73 +1441,183 @@ function renderRecipeEditor() {
     wrap.innerHTML = '<div class="empty">좌측에서 맛을 선택하세요.</div>';
     return;
   }
-  const opt     = getOpt(editingOptionId);
-  const recipes = META.recipes.filter(r => r.optionId === editingOptionId);
+  const opt      = getOpt(editingOptionId);
+  const base     = getBaseRecipe(editingOptionId);
+  const archives = getArchivedBases(editingOptionId);
+  const research = getResearchRecipes(editingOptionId);
 
-  wrap.innerHTML = `
-    <div class="section-hdr">
+  let html = `
+    <div class="section-hdr" style="margin-bottom:16px">
       <h3 style="display:flex;align-items:center;gap:8px">
         <span class="option-dot" style="background:${opt.color}"></span>
-        <input value="${opt.name}" style="background:transparent;border:none;color:var(--text);font-size:14px;font-weight:600;width:150px"
+        <input value="${opt.name}" style="background:transparent;border:none;color:var(--text);font-size:14px;font-weight:600;width:160px"
           onchange="updateOptionName(this.value)">
         <input type="color" value="${opt.color}" title="색상 변경"
           style="width:28px;height:28px;border:none;border-radius:50%;cursor:pointer;background:none;padding:0"
           onchange="updateOptionColor(this.value)">
       </h3>
-      <button class="btn btn-ghost btn-sm" onclick="addRecipe('${editingOptionId}')">+ 레시피 추가</button>
-    </div>
-    <div class="recipe-editor" id="recipeEditor">
-      ${recipes.map(r => renderRecipeCard(r)).join('')}
-      ${recipes.length === 0 ? '<div class="empty">레시피가 없습니다.</div>' : ''}
     </div>`;
+
+  // ── 기본 레시피 ──────────────────────────────────────────
+  html += `<div class="base-recipe-section">
+    <div class="base-recipe-header">
+      <span class="base-badge">BASE</span>
+      <span style="font-size:14px;font-weight:700;flex:1">${base ? base.name : '기본 레시피 없음'}</span>
+      <div style="display:flex;gap:6px">
+        ${archives.length ? `<button class="btn btn-ghost btn-sm" onclick="toggleArchive('${editingOptionId}')">히스토리 (${archives.length})</button>` : ''}
+        ${base ? `<button class="btn btn-ghost btn-sm" onclick="openCopyModal('${base.id}')">복사</button>` : ''}
+      </div>
+    </div>
+    ${base ? renderBaseIngEditor(base) : `
+      <div class="empty" style="padding:12px 0">기본 레시피가 없습니다.</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addBaseRecipe('${editingOptionId}')">+ 기본 레시피 추가</button>`}
+  </div>`;
+
+  // ── 버전 히스토리 ─────────────────────────────────────────
+  if (archives.length) {
+    html += `<div id="arc-${editingOptionId}" style="display:none;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 20px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">이전 기본 레시피</div>
+      <div class="archive-list">`;
+    archives.forEach(a => {
+      const c = recipeCost(a), v = batchVolume(a), p = v ? Math.round(c/v*120) : 0;
+      html += `<div class="archive-item">
+        <span class="archive-badge">v${a.version}</span>
+        <span style="flex:1;color:var(--text)">${a.name}</span>
+        <span style="font-size:12px">${a.archivedAt || ''}</span>
+        <span style="font-size:12px">원가 ${fmt(c)} · 120g ${p}원</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // ── 연구 레시피 ───────────────────────────────────────────
+  html += `<div>
+    <div class="research-section-hdr">
+      <span style="font-size:14px;font-weight:700">연구 레시피
+        <span style="font-weight:400;color:var(--muted)">(${research.length})</span>
+      </span>
+      <button class="btn btn-primary btn-sm" onclick="openResearchModal('${editingOptionId}')">+ 연구 추가</button>
+    </div>`;
+
+  if (!research.length) {
+    html += `<div class="empty" style="padding:28px;text-align:center;line-height:1.7">
+      아직 연구 레시피가 없습니다.<br>
+      <span style="font-size:12px">기본 레시피 대비 변경점을 실험하고 결과를 기록해보세요.</span>
+    </div>`;
+  } else {
+    research.forEach(r => { html += renderResearchCard(r, base); });
+  }
+  html += `</div>`;
+  wrap.innerHTML = html;
 }
 
-function renderRecipeCard(recipe) {
+// ── 기본 레시피 재료 편집기 ───────────────────────────────
+function renderBaseIngEditor(recipe) {
   const cost   = recipeCost(recipe);
   const vol    = batchVolume(recipe);
   const per120 = vol ? Math.round(cost / vol * 120) : 0;
-
-  const ingOptions = META.ingredients.map(ing =>
-    `<option value="${ing.id}">${ing.name} (${ing.unit})</option>`
-  ).join('');
-
   const ingRows = recipe.ingredients.map((ri, idx) => {
-    const selOptions = META.ingredients.map(ing =>
+    const selOpts = META.ingredients.map(ing =>
       `<option value="${ing.id}" ${ing.id === ri.id ? 'selected' : ''}>${ing.name} (${ing.unit})</option>`
     ).join('');
-    return `
-      <div class="ing-row">
-        <select class="ing-select" onchange="updateIngredient('${recipe.id}',${idx},'id',this.value)">${selOptions}</select>
-        <input class="ing-qty" type="number" value="${ri.qty}" min="0" step="any"
-          onchange="updateIngredient('${recipe.id}',${idx},'qty',this.value)">
-        <span style="color:var(--muted);font-size:12px">${getIngr(ri.id)?.unit || ''}</span>
-        <button class="btn btn-ghost btn-sm" onclick="removeIngredient('${recipe.id}',${idx})">✕</button>
-      </div>`;
+    return `<div class="ing-row">
+      <select class="ing-select" onchange="updateIngredient('${recipe.id}',${idx},'id',this.value)">${selOpts}</select>
+      <input class="ing-qty" type="number" value="${ri.qty}" min="0" step="any"
+        onchange="updateIngredient('${recipe.id}',${idx},'qty',this.value)">
+      <span style="color:var(--muted);font-size:12px">${getIngr(ri.id)?.unit || ''}</span>
+      <button class="btn btn-ghost btn-sm" onclick="removeIngredient('${recipe.id}',${idx})">✕</button>
+    </div>`;
+  }).join('');
+  return `${ingRows}
+    <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addIngredientToRecipe('${recipe.id}')">+ 재료 추가</button>
+    <div class="recipe-cost" id="rcost-${recipe.id}">
+      배치 원가: <strong style="color:var(--green)">${fmt(cost)}</strong>
+      &nbsp;·&nbsp; 120g당: <strong style="color:var(--accent)">${per120}원</strong>
+      &nbsp;·&nbsp; 배치 용량: <span id="rvol-${recipe.id}">${vol.toLocaleString()}</span>g
+      <span style="color:var(--muted);margin-left:4px">(재료비 × 1.1)</span>
+    </div>`;
+}
+
+// ── 연구 레시피 카드 ──────────────────────────────────────
+function renderResearchCard(r, base) {
+  const hyp    = r.hypothesis || {};
+  const status = hyp.status || 'ongoing';
+  const deltas = computeDeltas(r, base);
+
+  const deltaSummary = deltas.slice(0, 4).map(d => {
+    const sign = d.delta > 0 ? '+' : '';
+    const cls  = d.delta > 0 ? 'delta-pos' : 'delta-neg';
+    const val  = Math.abs(d.delta) % 1 < 0.01 ? d.delta : d.delta.toFixed(1);
+    return `<span class="${cls}">${d.name} ${sign}${val}${d.unit}</span>`;
+  }).join(' &nbsp;·&nbsp; ');
+
+  const deltaRows = deltas.map(d => {
+    const sign = d.delta > 0 ? '+' : '';
+    const cls  = d.delta > 0 ? 'delta-pos' : 'delta-neg';
+    const val  = Math.abs(d.delta) % 1 < 0.01 ? d.delta : d.delta.toFixed(1);
+    const pct  = d.baseQty > 0 ? ` (${sign}${((d.delta/d.baseQty)*100).toFixed(1)}%)` : '';
+    return `<tr>
+      <td>${d.name}</td>
+      <td>${d.baseQty > 0 ? d.baseQty + d.unit : '—'}</td>
+      <td>${d.resQty > 0 ? d.resQty + d.unit : '—'}</td>
+      <td class="${cls}">${sign}${val}${d.unit}${pct}</td>
+    </tr>`;
   }).join('');
 
-  return `
-    <div class="recipe-row" id="rcard-${recipe.id}">
-      <div class="recipe-header">
-        <div>
-          <input class="recipe-name-input" value="${recipe.name}"
-            onchange="updateRecipeName('${recipe.id}',this.value)">
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">
-            배치 용량: <span id="rvol-${recipe.id}">${vol.toLocaleString()}</span>g
-          </div>
-        </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="openCopyModal('${recipe.id}')">복사</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteRecipe('${recipe.id}')">삭제</button>
-        </div>
+  const deltaTable = deltas.length
+    ? `<table class="delta-table">
+        <thead><tr><th>재료</th><th>기본</th><th>연구</th><th>변경</th></tr></thead>
+        <tbody>${deltaRows}</tbody>
+       </table>`
+    : `<div style="font-size:13px;color:var(--muted);margin:8px 0 10px">기본 레시피와 동일한 재료 구성</div>`;
+
+  const rc = recipeCost(r), bc = base ? recipeCost(base) : 0;
+  const rv = batchVolume(r), bv = base ? batchVolume(base) : 0;
+  const rp = rv ? Math.round(rc/rv*120) : 0;
+  const bp = bv ? Math.round(bc/bv*120) : 0;
+  const dC = rc - bc, dP = rp - bp;
+  const costStr = base ? ` <span class="${dC>=0?'delta-neg':'delta-pos'}" style="font-size:12px">(${dC>=0?'+':''}${fmt(dC)})</span>` : '';
+  const perStr  = base ? ` <span class="${dP>=0?'delta-neg':'delta-pos'}" style="font-size:12px">(${dP>=0?'+':''}${dP}원)</span>` : '';
+
+  const srcHtml = (hyp.sources||[]).map(s => {
+    const icon = {paper:'📄',blog:'🔗',book:'📚',other:'📎'}[s.type]||'📎';
+    return s.url
+      ? `<a class="source-chip" href="${s.url}" target="_blank" rel="noopener">${icon} ${s.title}</a>`
+      : `<span class="source-chip" style="color:var(--muted);cursor:default">${icon} ${s.title}</span>`;
+  }).join('');
+
+  return `<div class="research-card">
+    <div class="research-card-header">
+      <div>
+        <div class="research-card-title">${hyp.title || r.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${deltaSummary || '재료 변경 없음'}</div>
       </div>
-      ${ingRows}
-      <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addIngredientToRecipe('${recipe.id}')">+ 재료 추가</button>
-      <div class="recipe-cost" id="rcost-${recipe.id}">
-        배치 원가: <strong style="color:var(--green)">${fmt(cost)}</strong>
-        &nbsp;·&nbsp; 120g당: <strong style="color:var(--accent)">${per120}원</strong>
-        <span style="color:var(--muted);margin-left:4px">(재료비 × 1.1 손실 포함)</span>
-      </div>
-    </div>`;
+      <span class="status-badge ${STATUS_CLS[status]}">${STATUS_LABEL[status]}</span>
+    </div>
+    ${deltaTable}
+    <div style="font-size:13px;color:var(--muted)">
+      배치 원가: <strong style="color:var(--text)">${fmt(rc)}</strong>${costStr}
+      &nbsp;·&nbsp; 120g당: <strong style="color:var(--text)">${rp}원</strong>${perStr}
+    </div>
+    ${hyp.reason ? `<div style="margin-top:12px"><div class="hyp-label">가설 이유</div><div class="hyp-text">${hyp.reason.replace(/\n/g,'<br>')}</div></div>` : ''}
+    ${srcHtml    ? `<div style="margin-top:10px"><div class="hyp-label">출처</div><div style="margin-top:4px">${srcHtml}</div></div>` : ''}
+    ${hyp.result ? `<div style="margin-top:10px"><div class="hyp-label">결과 메모</div><div class="hyp-text">${hyp.result.replace(/\n/g,'<br>')}</div></div>` : ''}
+    <div style="display:flex;gap:8px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost btn-sm" onclick="openResearchModal('${r.optionId}','${r.id}')">수정</button>
+      ${status !== 'adopted' ? `<button class="btn btn-primary btn-sm" onclick="openPromoteModal('${r.id}')">기본으로 승격 ↑</button>` : ''}
+      <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="deleteResearchRecipe('${r.id}')">삭제</button>
+    </div>
+  </div>`;
+}
+
+function addBaseRecipe(optionId) {
+  const r = { id:'r'+uid(), optionId, name:'새 기본 레시피', type:'base', version:null, ingredients:[] };
+  META.recipes.push(r); persistMeta(); renderRecipeEditor();
+}
+function deleteResearchRecipe(id) {
+  if (!confirm('연구 레시피를 삭제하시겠습니까?')) return;
+  META.recipes = META.recipes.filter(r => r.id !== id);
+  persistMeta(); renderRecipeEditor(); showToast('삭제되었습니다.');
 }
 
 function updateOptionName(val) {
@@ -1284,8 +1643,168 @@ function deleteOption(id) {
   if (editingOptionId === id) editingOptionId = META.options[0]?.id || null;
   persistMeta(); renderRecipeTab();
 }
+// ═══════════════════════════════════════════════════════════
+// 연구 레시피 모달 로직
+// ═══════════════════════════════════════════════════════════
+let _rm = { optionId: null, editId: null, sources: [] };
+
+function openResearchModal(optionId, editId) {
+  _rm = { optionId, editId: editId || null, sources: [] };
+  const base   = getBaseRecipe(optionId);
+  const isEdit = !!editId;
+  document.getElementById('rmTitle').textContent = isEdit ? '연구 레시피 수정' : '연구 레시피 추가';
+
+  if (isEdit) {
+    const r = getRecipe(editId), hyp = r.hypothesis || {};
+    document.getElementById('rm-title').value  = hyp.title  || '';
+    document.getElementById('rm-reason').value = hyp.reason || '';
+    document.getElementById('rm-result').value = hyp.result || '';
+    document.getElementById('rm-status').value = hyp.status || 'ongoing';
+    _rm.sources = JSON.parse(JSON.stringify(hyp.sources || []));
+  } else {
+    ['rm-title','rm-reason','rm-result'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('rm-status').value = 'ongoing';
+    _rm.sources = [];
+  }
+
+  rmRenderSources();
+  rmBuildDeltaTable(base, isEdit ? getRecipe(editId) : null);
+  document.getElementById('researchModal').classList.add('show');
+}
+function closeResearchModal() {
+  document.getElementById('researchModal').classList.remove('show');
+}
+
+// ── 출처 관리 ─────────────────────────────────────────────
+function rmRenderSources() {
+  document.getElementById('rm-sources-list').innerHTML = _rm.sources.map((s, i) => {
+    const icon = {paper:'📄',blog:'🔗',book:'📚',other:'📎'}[s.type]||'📎';
+    return `<div class="src-row" style="background:var(--bg);border-radius:6px;padding:4px 8px;margin-bottom:4px">
+      <span style="font-size:14px">${icon}</span>
+      <span style="flex:1;font-size:13px">${s.title}${s.url?` <span style="color:var(--muted);font-size:11px">— ${s.url}</span>`:''}</span>
+      <button class="btn btn-ghost btn-sm" onclick="rmRemoveSrc(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+function rmAddSource() {
+  const type  = document.getElementById('rm-src-type').value;
+  const title = document.getElementById('rm-src-title').value.trim();
+  const url   = document.getElementById('rm-src-url').value.trim();
+  if (!title) { showToast('출처 제목을 입력해주세요.'); return; }
+  _rm.sources.push({ type, title, url });
+  document.getElementById('rm-src-title').value = '';
+  document.getElementById('rm-src-url').value   = '';
+  rmRenderSources();
+}
+function rmRemoveSrc(idx) { _rm.sources.splice(idx, 1); rmRenderSources(); }
+
+// ── 델타 테이블 ───────────────────────────────────────────
+function rmBuildDeltaTable(base, editRecipe) {
+  document.getElementById('rm-base-label').textContent =
+    base ? `기준 레시피: ${base.name}` : '기본 레시피가 없습니다.';
+  const tbody = document.getElementById('rm-delta-body');
+  if (!base) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--muted);padding:10px">먼저 기본 레시피를 추가해주세요.</td></tr>'; return; }
+
+  const baseIds = new Set(base.ingredients.map(ri => ri.id));
+  const extras  = editRecipe ? editRecipe.ingredients.filter(ri => !baseIds.has(ri.id)) : [];
+
+  const rows = [
+    ...base.ingredients.map(ri => ({ id:ri.id, baseQty:ri.qty, isExtra:false })),
+    ...extras.map(ri => ({ id:ri.id, baseQty:0, isExtra:true }))
+  ];
+
+  tbody.innerHTML = rows.map(({ id, baseQty, isExtra }) => {
+    const ing    = getIngr(id);
+    const name   = ing ? ing.name : id;
+    const unit   = ing ? ing.unit : '';
+    const resQty = editRecipe ? (editRecipe.ingredients.find(ri => ri.id === id)?.qty || 0) : baseQty;
+    const delta  = resQty - baseQty;
+    return rmRow(id, name, unit, baseQty, resQty, delta, isExtra);
+  }).join('');
+  rmRefreshCost(base);
+}
+function rmRow(ingId, name, unit, baseQty, resQty, delta, isExtra) {
+  const dStr = delta !== 0 ? (delta > 0 ? '+' : '') + (Math.abs(delta) % 1 < 0.01 ? delta : delta.toFixed(1)) : '0';
+  const dCls = delta > 0 ? 'pos' : (delta < 0 ? 'neg' : '');
+  const resFmt = resQty > 0 ? (resQty % 1 < 0.01 ? resQty : resQty.toFixed(1)) + unit : (isExtra ? '—' : baseQty + unit);
+  return `<tr data-ing="${ingId}" data-base="${baseQty}">
+    <td>${name}${isExtra ? ' <span style="color:var(--accent);font-size:11px">[신규]</span>' : ''}</td>
+    <td style="color:var(--muted)">${baseQty > 0 ? baseQty + unit : '—'}</td>
+    <td><input class="di ${dCls}" data-ing="${ingId}" type="number" value="${dStr}" step="any"
+      oninput="rmOnChange(this,'${ingId}',${baseQty},'${unit}')"></td>
+    <td class="res-qty ${dCls}" id="rmr-${ingId}">${resFmt}</td>
+  </tr>`;
+}
+function rmOnChange(inp, ingId, baseQty, unit) {
+  const delta  = parseFloat(inp.value) || 0;
+  const resQty = baseQty + delta;
+  inp.className = 'di ' + (delta > 0 ? 'pos' : (delta < 0 ? 'neg' : ''));
+  const el = document.getElementById('rmr-' + ingId);
+  if (el) {
+    el.textContent = (resQty > 0 ? (resQty % 1 < 0.01 ? resQty : resQty.toFixed(1)) : '0') + unit;
+    el.className   = 'res-qty ' + (delta > 0 ? 'pos' : (delta < 0 ? 'neg' : ''));
+  }
+  rmRefreshCost(getBaseRecipe(_rm.optionId));
+}
+function rmAddExtraIngredient() {
+  const base    = getBaseRecipe(_rm.optionId);
+  const usedIds = new Set([
+    ...(base?.ingredients || []).map(ri => ri.id),
+    ...[...document.querySelectorAll('#rm-delta-body tr[data-ing]')].map(tr => tr.getAttribute('data-ing'))
+  ]);
+  const ing = META.ingredients.find(i => !usedIds.has(i.id));
+  if (!ing) { showToast('추가할 수 있는 재료가 없습니다.'); return; }
+  document.getElementById('rm-delta-body').innerHTML += rmRow(ing.id, ing.name, ing.unit, 0, 0, 0, true);
+  rmRefreshCost(base);
+}
+function rmCollectIngredients(base) {
+  return [...document.querySelectorAll('#rm-delta-body tr[data-ing]')].map(tr => {
+    const ingId   = tr.getAttribute('data-ing');
+    const baseQty = parseFloat(tr.getAttribute('data-base')) || 0;
+    const delta   = parseFloat(tr.querySelector('.di')?.value) || 0;
+    const resQty  = baseQty + delta;
+    return resQty > 0.001 ? { id: ingId, qty: resQty } : null;
+  }).filter(Boolean);
+}
+function rmRefreshCost(base) {
+  const ings = rmCollectIngredients(base);
+  const tmp  = { ingredients: ings };
+  const rc = recipeCost(tmp), bc = base ? recipeCost(base) : 0;
+  const rv = batchVolume(tmp), bv = base ? batchVolume(base) : 0;
+  const rp = rv ? Math.round(rc/rv*120) : 0;
+  const bp = bv ? Math.round(bc/bv*120) : 0;
+  const dC = rc - bc, dP = rp - bp;
+  document.getElementById('rm-cost-bar').innerHTML =
+    `배치 원가: <strong>${fmt(rc)}</strong> <span style="color:${dC>=0?'#dc2626':'#16a34a'};font-size:12px">(${dC>=0?'+':''}${fmt(dC)})</span>` +
+    ` &nbsp;·&nbsp; 120g당: <strong>${rp}원</strong> <span style="color:${dP>=0?'#dc2626':'#16a34a'};font-size:12px">(${dP>=0?'+':''}${dP}원)</span>`;
+}
+function saveResearchRecipe() {
+  const title  = document.getElementById('rm-title').value.trim();
+  const reason = document.getElementById('rm-reason').value.trim();
+  const result = document.getElementById('rm-result').value.trim();
+  const status = document.getElementById('rm-status').value;
+  if (!title) { showToast('연구 제목을 입력해주세요.'); return; }
+
+  const base = getBaseRecipe(_rm.optionId);
+  const ings = rmCollectIngredients(base);
+  const hyp  = { title, reason, result, status, sources: [..._rm.sources] };
+
+  if (_rm.editId) {
+    const r = getRecipe(_rm.editId);
+    if (r) { r.hypothesis = hyp; r.ingredients = ings; r.name = title; }
+  } else {
+    META.recipes.push({
+      id: 'r' + uid(), optionId: _rm.optionId, name: title,
+      type: 'research', baseRecipeId: base?.id || null, hypothesis: hyp, ingredients: ings
+    });
+  }
+  persistMeta(); closeResearchModal(); renderRecipeEditor();
+  showToast(_rm.editId ? '수정되었습니다.' : '연구 레시피가 추가되었습니다.');
+}
+
+// ── 기존 addRecipe는 base 타입으로 ────────────────────────
 function addRecipe(optionId) {
-  const r = { id: 'r' + uid(), optionId, name: '새 레시피', ingredients: [] };
+  const r = { id: 'r' + uid(), optionId, name: '새 레시피', type: 'base', version: null, ingredients: [] };
   META.recipes.push(r);
   persistMeta(); renderRecipeEditor();
 }
@@ -1323,6 +1842,7 @@ function confirmCopy() {
     id: 'r' + uid(),
     optionId: targetId,
     name: src.name + ' (복사본)',
+    type: 'base', version: null,
     ingredients: JSON.parse(JSON.stringify(src.ingredients))
   };
   META.recipes.push(newRecipe);
@@ -1420,6 +1940,8 @@ function deleteIngredient(idx) {
 // 초기화
 // ═══════════════════════════════════════════════════════════
 async function init() {
+  migrateRecipeTypes(); // 기존 레시피에 type:'base' 추가 (1회성)
+
   // 초기 탭: URL 해시 우선, 없으면 생산 관리
   const initHash = location.hash.slice(1);
   const startTab = TAB_IDX.hasOwnProperty(initHash) ? initHash : 'prod';
@@ -1428,6 +1950,7 @@ async function init() {
   // API에서 최신 메타 로드 후 재렌더
   const updated = await loadMetaFromAPI();
   if (updated) {
+    migrateRecipeTypes(); // API 데이터에도 마이그레이션 적용
     renderProdOptions();
     if (document.getElementById('tab-recipe').classList.contains('active')) renderRecipeTab();
     if (document.getElementById('tab-ingr').classList.contains('active'))   renderIngrTable();
