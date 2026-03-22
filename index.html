@@ -1068,9 +1068,9 @@ function renderProdStep2() {
   const step3 = document.getElementById('prodStep3');
   if (!selOptionId) { step2.style.display = 'none'; step3.style.display = 'none'; return; }
 
-  // archived base 제외, base 먼저 → research 순서
+  // archived base 제외, 재료 없는 레시피 제외, base 먼저 → research 순서
   const recipes = META.recipes
-    .filter(r => r.optionId === selOptionId && !r.version)
+    .filter(r => r.optionId === selOptionId && !r.version && r.ingredients?.length > 0)
     .sort((a, b) => (a.type === 'base' ? 0 : 1) - (b.type === 'base' ? 0 : 1));
   if (!recipes.length) { step2.style.display = 'none'; step3.style.display = 'none'; return; }
 
@@ -1459,6 +1459,8 @@ function renderRecipeEditor() {
     </div>`;
 
   // ── 기본 레시피 ──────────────────────────────────────────
+  // 활성 base가 여러 개인 경우(데이터 오류) 모두 표시
+  const allActiveBases = META.recipes.filter(r => r.optionId === editingOptionId && r.type === 'base' && !r.version);
   html += `<div class="base-recipe-section">
     <div class="base-recipe-header">
       <span class="base-badge">BASE</span>
@@ -1472,6 +1474,19 @@ function renderRecipeEditor() {
       <div class="empty" style="padding:12px 0">기본 레시피가 없습니다.</div>
       <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addBaseRecipe('${editingOptionId}')">+ 기본 레시피 추가</button>`}
   </div>`;
+  // 중복 base 레시피 경고 (첫 번째 제외한 나머지)
+  const extraBases = allActiveBases.slice(1);
+  if (extraBases.length) {
+    html += `<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:var(--r);padding:12px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#856404;margin-bottom:8px">⚠ 중복 기본 레시피 발견 — 생산 등록에서 숨겨집니다. 삭제하세요.</div>
+      ${extraBases.map(r => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #ffeaa7">
+          <span style="flex:1;font-size:13px;color:#333">${r.name}</span>
+          <span style="font-size:12px;color:#666">재료 ${r.ingredients?.length || 0}개</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecipe('${r.id}')">삭제</button>
+        </div>`).join('')}
+    </div>`;
+  }
 
   // ── 버전 히스토리 ─────────────────────────────────────────
   if (archives.length) {
