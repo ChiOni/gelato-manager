@@ -1382,15 +1382,17 @@ function confirmPromote() {
   const arcs     = getArchivedBases(optionId);
   const nextV    = arcs.length ? Math.max(...arcs.map(a => a.version)) + 1 : 1;
   // 현재 base 아카이브
+  const opt = getOpt(optionId);
+  const optName = opt ? opt.name : (base ? base.name.replace(/_v\d+$/, '') : '기본 레시피');
   if (base) {
-    const stripped = base.name.replace(/_v\d+$/, '');
-    base.name       = stripped + `_v${nextV}`;
+    base.name       = `${optName}_v${nextV}`;
     base.version    = nextV;
     base.archivedAt = new Date().toISOString().slice(0, 10);
   }
   // 연구 레시피 → base 승격
   r.type    = 'base';
   r.version = null;
+  r.name    = optName;
   delete r.archivedAt;
   if (r.hypothesis) r.hypothesis.status = 'adopted';
   persistMeta();
@@ -1626,7 +1628,8 @@ function renderResearchCard(r, base) {
 }
 
 function addBaseRecipe(optionId) {
-  const r = { id:'r'+uid(), optionId, name:'새 기본 레시피', type:'base', version:null, ingredients:[] };
+  const opt = getOpt(optionId);
+  const r = { id:'r'+uid(), optionId, name: opt ? opt.name : '기본 레시피', type:'base', version:null, ingredients:[] };
   META.recipes.push(r); persistMeta(); renderRecipeEditor();
 }
 function deleteResearchRecipe(id) {
@@ -1856,7 +1859,7 @@ function confirmCopy() {
   const newRecipe = {
     id: 'r' + uid(),
     optionId: targetId,
-    name: src.name + ' (복사본)',
+    name: target.name,
     type: 'base', version: null,
     ingredients: JSON.parse(JSON.stringify(src.ingredients))
   };
