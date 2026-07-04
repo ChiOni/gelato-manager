@@ -158,7 +158,10 @@ async function getRecipeList() {
     template: {
       outputs: [{ simpleText: { text: '🍦 어떤 메뉴의 레시피를 확인할까요?' } }],
       quickReplies: recipes.map(r => ({
-        label: String(r['이름']), action: 'block', messageText: `${r['이름']} 레시피`
+        label: String(r['이름']),
+        action: 'block',
+        blockId: '6a48d8959f5a1f4f377f7575',
+        messageText: `${r['이름']} 레시피`
       }))
     }
   };
