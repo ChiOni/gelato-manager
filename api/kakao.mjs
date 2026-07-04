@@ -1,6 +1,6 @@
 // 스쿱 카카오 스킬서버 — Vercel Edge Function
-// 아키텍처: Kakao POST → Edge Function → Upstash Redis (캐시, ~10ms)
-//                                       → Apps Script GET (캐시 miss 시만, ~4s)
+// 라우팅: URL ?skill= 쿼리스트링
+// 폴백: ?skill=handleUtterance → utterance 파싱 (버튼 클릭 포함)
 
 export const config = { runtime: 'edge' };
 
@@ -12,7 +12,6 @@ async function redisGet(key) {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return null;
-
   const res = await fetch(`${url}/get/${encodeURIComponent(key)}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -24,7 +23,6 @@ async function redisSet(key, value) {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return;
-
   await fetch(`${url}/pipeline`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -32,7 +30,6 @@ async function redisSet(key, value) {
   });
 }
 
-// Redis 캐시 먼저, 없으면 Apps Script에서 로드 후 캐시에 저장
 async function getData(key, asAction) {
   let data = await redisGet(key);
   if (!data) {
@@ -44,7 +41,6 @@ async function getData(key, asAction) {
   return data;
 }
 
-// 쓰기 작업: Redis 즉시 업데이트 + Apps Script 백그라운드 동기화
 function syncToSheet(params, ctx) {
   const url = `${AS}?${new URLSearchParams({ action: 'kakaoSkill', ...params })}`;
   ctx?.waitUntil?.(fetch(url, { redirect: 'follow' }).catch(() => {}));
@@ -83,16 +79,17 @@ async function getWineList() {
     template: {
       outputs: [{ listCard: { header: { title: `🍷 와인 목록 (${wines.length}종)` }, items } }],
       quickReplies: wines.slice(0, 10).map(w => ({
-        label: String(w['이름']), action: 'block', messageText: `${w['이름']} 상세`
+        label: String(w['이름']), action: 'message', messageText: `${w['이름']} 상세`
       }))
     }
   };
 }
 
 async function getWineDetail(wineName) {
+  const name = String(wineName).replace(/\s*상세$/, '').trim();
   const wines = await getData('wines', 'getWines');
-  const wine = wines.find(w => String(w['이름']).trim() === String(wineName).trim());
-  if (!wine) return simpleText(`❓ "${wineName}" 와인을 찾을 수 없습니다.`);
+  const wine = wines.find(w => String(w['이름']).trim() === name);
+  if (!wine) return simpleText(`❓ "${name}" 와인을 찾을 수 없습니다.`);
 
   const stock = parseInt(wine['재고']) || 0;
   return {
@@ -103,11 +100,12 @@ async function getWineDetail(wineName) {
           title: String(wine['이름']),
           description: `🍇 ${wine['특징']}\n\n💰 가격: ${wine['가격']}원\n📦 재고: ${stock > 0 ? stock + '병' : '❌ 품절'}`,
           buttons: [
-            { label: '재고 추가 (+1)', action: 'block', messageText: `${wine['이름']} 재고 추가` },
-            { label: '재고 감소 (-1)', action: 'block', messageText: `${wine['이름']} 재고 감소` }
+            { label: '재고 추가 (+1)', action: 'message', messageText: `${wine['이름']} 재고 추가` },
+            { label: '재고 감소 (-1)', action: 'message', messageText: `${wine['이름']} 재고 감소` }
           ]
         }
-      }]
+      }],
+      quickReplies: QUICK
     }
   };
 }
@@ -158,18 +156,15 @@ async function getRecipeList() {
     template: {
       outputs: [{ simpleText: { text: '🍦 어떤 메뉴의 레시피를 확인할까요?' } }],
       quickReplies: recipes.map(r => ({
-        label: String(r['이름']),
-        action: 'block',
-        blockId: '6a48d8959f5a1f4f377f7575',
-        messageText: `${r['이름']} 레시피`,
-        extra: { menu_name: r['이름'] }
+        label: String(r['이름']), action: 'message', messageText: `${r['이름']} 레시피`
       }))
     }
   };
 }
 
 async function getRecipeDetail(menuName) {
-  const name = menuName.replace(' 레시피', '').trim();
+  const name = String(menuName).replace(/\s*레시피$/, '').trim();
+  if (!name) return simpleText('어떤 메뉴의 레시피를 확인할까요?');
   const recipes = await getData('recipes', 'getRecipes');
   const r = recipes.find(recipe => String(recipe['이름']).trim() === name);
   if (!r) return simpleText(`❓ "${name}" 레시피를 찾을 수 없습니다.`);
@@ -182,7 +177,7 @@ async function getRecipeDetail(menuName) {
           description: `${r['재료']}\n\n${r['특징']}`
         }
       }],
-      quickReplies: [{ label: '다른 레시피', action: 'block', messageText: '레시피 목록' }, ...QUICK]
+      quickReplies: [{ label: '다른 레시피', action: 'message', messageText: '레시피 목록' }, ...QUICK]
     }
   };
 }
@@ -194,6 +189,34 @@ async function addRecipe(params, ctx) {
   await redisSet('recipes', recipes);
   syncToSheet({ skillAction: 'addRecipe', menu_name: params.menu_name, ingredients: params.ingredients || '', feature: params.feature || '' }, ctx);
   return simpleText(`✅ "${params.menu_name}" 레시피가 추가되었습니다.`);
+}
+
+// ─── 폴백 핸들러: utterance 파싱으로 라우팅 ─────────────────────────────────
+// 모든 버튼(action:message)이 발화로 전달되면 여기서 처리
+
+async function handleUtterance(utterance, ctx) {
+  const u = String(utterance || '').trim();
+  if (!u) return simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
+
+  // "XX 레시피" → 레시피 상세
+  if (u.endsWith('레시피')) return getRecipeDetail(u);
+
+  // "XX 상세" → 와인 상세
+  if (u.endsWith('상세')) return getWineDetail(u);
+
+  // "XX 재고 추가" → 재고 증가
+  if (u.includes('재고 추가')) {
+    const name = u.replace(/\s*재고\s*추가.*$/, '').trim();
+    return updateWineStock(name, '1', 'add', ctx);
+  }
+
+  // "XX 재고 감소" → 재고 감소
+  if (u.includes('재고 감소')) {
+    const name = u.replace(/\s*재고\s*감소.*$/, '').trim();
+    return updateWineStock(name, '1', 'sub', ctx);
+  }
+
+  return simpleText(`🤔 "${u}"를 이해하지 못했어요.\n아래 메뉴에서 선택해주세요.`);
 }
 
 // ─── 메인 핸들러 ─────────────────────────────────────────────────────────────
@@ -219,22 +242,23 @@ export default async function handler(req, ctx) {
   let body;
   try { body = await req.json(); } catch { return ok(simpleText('요청 파싱 오류')); }
 
-  // action.name은 Kakao 내부 ID라 사용 불가 → URL ?skill= 쿼리스트링으로 라우팅
   const skillAction = searchParams.get('skill') || '';
   const params = body?.action?.params || {};
+  const utterance = body?.userRequest?.utterance || '';
 
   try {
     let result;
     switch (skillAction) {
-      case 'getWineList':     result = await getWineList();                                                             break;
-      case 'getWineDetail':   result = await getWineDetail(params.wine_name || '');                                    break;
-      case 'addWine':         result = await addWine(params, ctx);                                                     break;
-      case 'updateWine':      result = await updateWine(params, ctx);                                                  break;
-      case 'updateWineStock': result = await updateWineStock(params.wine_name || '', params.quantity || '1', params.stock_action || 'add', ctx); break;
-      case 'getRecipeList':   result = await getRecipeList();                                                          break;
-      case 'getRecipeDetail': result = simpleText(`[DEBUG]\nutterance: "${body?.userRequest?.utterance}"\nclientExtra: ${JSON.stringify(body?.action?.clientExtra)}\nparams: ${JSON.stringify(params)}`); break;
-      case 'addRecipe':       result = await addRecipe(params, ctx);                                                   break;
-      default:                result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
+      case 'getWineList':       result = await getWineList();                                                                         break;
+      case 'getWineDetail':     result = await getWineDetail(params.wine_name || utterance);                                          break;
+      case 'addWine':           result = await addWine(params, ctx);                                                                  break;
+      case 'updateWine':        result = await updateWine(params, ctx);                                                               break;
+      case 'updateWineStock':   result = await updateWineStock(params.wine_name || '', params.quantity || '1', params.stock_action || 'add', ctx); break;
+      case 'getRecipeList':     result = await getRecipeList();                                                                       break;
+      case 'getRecipeDetail':   result = await getRecipeDetail(params.menu_name || utterance);                                        break;
+      case 'addRecipe':         result = await addRecipe(params, ctx);                                                                break;
+      case 'handleUtterance':   result = await handleUtterance(utterance, ctx);                                                       break;
+      default:                  result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
     }
     return ok(result);
   } catch (err) {
