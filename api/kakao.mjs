@@ -232,7 +232,7 @@ export default async function handler(req, ctx) {
       case 'updateWine':      result = await updateWine(params, ctx);                                                  break;
       case 'updateWineStock': result = await updateWineStock(params.wine_name || '', params.quantity || '1', params.stock_action || 'add', ctx); break;
       case 'getRecipeList':   result = await getRecipeList();                                                          break;
-      case 'getRecipeDetail': result = await getRecipeDetail(params.menu_name || body?.action?.clientExtra?.menu_name || body?.userRequest?.utterance || ''); break;
+      case 'getRecipeDetail': result = simpleText(`[DEBUG]\nutterance: "${body?.userRequest?.utterance}"\nclientExtra: ${JSON.stringify(body?.action?.clientExtra)}\nparams: ${JSON.stringify(params)}`); break;
       case 'addRecipe':       result = await addRecipe(params, ctx);                                                   break;
       default:                result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
     }
