@@ -253,6 +253,18 @@ export default async function handler(req, ctx) {
   let body;
   try { body = await req.json(); } catch { return ok(simpleText('요청 파싱 오류')); }
 
+  // 웹앱에서 직접 레시피 캐시 업데이트
+  if (searchParams.get('skill') === 'syncRecipes') {
+    const recipes = body?.recipes;
+    if (Array.isArray(recipes)) {
+      await redisSet('recipes_v2', recipes);
+      return new Response(JSON.stringify({ ok: true, count: recipes.length }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    return new Response(JSON.stringify({ ok: false }), { status: 400 });
+  }
+
   const skillAction = searchParams.get('skill') || '';
   const params = body?.action?.params || {};
   const utterance = body?.userRequest?.utterance || '';

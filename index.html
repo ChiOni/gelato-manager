@@ -712,6 +712,29 @@ function persistMeta() {
   const json = JSON.stringify(META);
   fetch(API, { method: 'POST', body: new URLSearchParams({ action: 'saveMetadata', data: json }) })
     .catch(() => {});
+  _syncRecipesToChatbot();
+}
+
+const CHATBOT_URL = 'https://gelato-manager.vercel.app/api/kakao';
+let _syncTimer = null;
+function _syncRecipesToChatbot() {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => {
+    const ingMap = {};
+    (META.ingredients || []).forEach(i => { ingMap[i.id] = i; });
+    const recipes = (META.recipes || []).map(r => {
+      const 재료 = (r.ingredients || []).map(i => {
+        const ing = ingMap[i.id];
+        return ing ? `${ing.name} ${i.qty}${ing.unit || 'g'}` : `${i.id} ${i.qty}`;
+      }).join(' · ');
+      return { 이름: r.name, 재료, 특징: '' };
+    });
+    fetch(`${CHATBOT_URL}?skill=syncRecipes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipes })
+    }).catch(() => {});
+  }, 2000);
 }
 
 // ═══════════════════════════════════════════════════════════
