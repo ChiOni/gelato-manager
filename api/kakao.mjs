@@ -53,8 +53,8 @@ function syncToSheet(params, ctx) {
 // ─── Kakao 응답 헬퍼 ─────────────────────────────────────────────────────────
 
 const QUICK = [
-  { label: '🍦 레시피', action: 'block', messageText: '레시피 목록' },
-  { label: '🍷 와인 목록', action: 'block', messageText: '와인 목록' }
+  { label: '🍦 레시피', action: 'message', messageText: '레시피 목록' },
+  { label: '🍷 와인 목록', action: 'message', messageText: '와인 목록' }
 ];
 
 function ok(data) {
@@ -161,7 +161,8 @@ async function getRecipeList() {
         label: String(r['이름']),
         action: 'block',
         blockId: '6a48d8959f5a1f4f377f7575',
-        messageText: `${r['이름']} 레시피`
+        messageText: `${r['이름']} 레시피`,
+        extra: { menu_name: r['이름'] }
       }))
     }
   };
@@ -231,7 +232,7 @@ export default async function handler(req, ctx) {
       case 'updateWine':      result = await updateWine(params, ctx);                                                  break;
       case 'updateWineStock': result = await updateWineStock(params.wine_name || '', params.quantity || '1', params.stock_action || 'add', ctx); break;
       case 'getRecipeList':   result = await getRecipeList();                                                          break;
-      case 'getRecipeDetail': result = await getRecipeDetail(params.menu_name || body?.userRequest?.utterance || ''); break;
+      case 'getRecipeDetail': result = await getRecipeDetail(params.menu_name || body?.action?.clientExtra?.menu_name || body?.userRequest?.utterance || ''); break;
       case 'addRecipe':       result = await addRecipe(params, ctx);                                                   break;
       default:                result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
     }
