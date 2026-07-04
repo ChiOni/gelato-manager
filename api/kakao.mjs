@@ -253,8 +253,9 @@ export default async function handler(req, ctx) {
   let body;
   try { body = await req.json(); } catch { return ok(simpleText('요청 파싱 오류')); }
 
-  // 웹앱에서 직접 레시피 캐시 업데이트
-  if (searchParams.get('skill') === 'syncRecipes') {
+  // 웹앱에서 직접 캐시 업데이트
+  const skill = searchParams.get('skill');
+  if (skill === 'syncRecipes') {
     const recipes = body?.recipes;
     if (Array.isArray(recipes)) {
       await redisSet('recipes_v2', recipes);
@@ -264,8 +265,18 @@ export default async function handler(req, ctx) {
     }
     return new Response(JSON.stringify({ ok: false }), { status: 400 });
   }
+  if (skill === 'syncWines') {
+    const wines = body?.wines;
+    if (Array.isArray(wines)) {
+      await redisSet('wines', wines);
+      return new Response(JSON.stringify({ ok: true, count: wines.length }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    return new Response(JSON.stringify({ ok: false }), { status: 400 });
+  }
 
-  const skillAction = searchParams.get('skill') || '';
+  const skillAction = skill || '';
   const params = body?.action?.params || {};
   const utterance = body?.userRequest?.utterance || '';
 

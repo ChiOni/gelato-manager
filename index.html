@@ -349,6 +349,7 @@ select, input   { font-family: inherit; }
   <button class="nav-btn active" onclick="switchTab('prod')">생산 관리</button>
   <button class="nav-btn" onclick="switchTab('recipe')">레시피 관리</button>
   <button class="nav-btn" onclick="switchTab('ingr')">재료 관리</button>
+  <button class="nav-btn" onclick="switchTab('wine')">와인 관리</button>
 </nav>
 
 <!-- ══════════════════════════════════════════════
@@ -430,6 +431,22 @@ select, input   { font-family: inherit; }
     </table>
   </div>
   <!-- 재료 변경은 onchange에서 자동 저장됩니다 -->
+</div>
+
+<!-- ══════════════════════════════════════════════
+     탭 5: 와인 관리
+════════════════════════════════════════════════ -->
+<div id="tab-wine" class="tab">
+  <div class="card">
+    <div class="section-hdr">
+      <h3>와인 목록</h3>
+      <button class="btn btn-ghost btn-sm" onclick="addWineRow()">+ 와인 추가</button>
+    </div>
+    <table>
+      <thead><tr><th>이름</th><th>특징</th><th>가격 (원)</th><th>재고 (병)</th><th></th></tr></thead>
+      <tbody id="wineTableBody"><tr><td colspan="5" class="empty">로드 중…</td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- 생산 등록 모달 -->
@@ -655,7 +672,7 @@ let prodTrendFlavorFilter = null; // Set or null (null = 미초기화)
 // ═══════════════════════════════════════════════════════════
 // 탭 전환
 // ═══════════════════════════════════════════════════════════
-const TAB_IDX = {prod:0, recipe:1, ingr:2};
+const TAB_IDX = {prod:0, recipe:1, ingr:2, wine:3};
 
 function switchTab(name) {
   if (!TAB_IDX.hasOwnProperty(name)) return;
@@ -669,6 +686,7 @@ function switchTab(name) {
   if (name === 'prod')   { loadProdHistory(); }
   if (name === 'recipe') renderRecipeTab();
   if (name === 'ingr')   renderIngrTable();
+  if (name === 'wine')   renderWineTable();
 }
 
 window.addEventListener('hashchange', () => {
@@ -1978,6 +1996,75 @@ function deleteIngredient(idx) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 탭 5: 와인 관리
+// ═══════════════════════════════════════════════════════════
+let WINES = [];
+
+async function loadWines() {
+  try {
+    const res = await fetch(`${API}?action=getWines`);
+    const json = await res.json();
+    WINES = json.data || [];
+  } catch(e) { WINES = []; }
+  renderWineTable();
+}
+
+function persistWines() {
+  fetch(API, {
+    method: 'POST',
+    body: new URLSearchParams({ action: 'saveWines', data: JSON.stringify(WINES) })
+  }).catch(() => {});
+  _syncWinesToChatbot();
+}
+
+let _wineSyncTimer = null;
+function _syncWinesToChatbot() {
+  clearTimeout(_wineSyncTimer);
+  _wineSyncTimer = setTimeout(() => {
+    fetch(`${CHATBOT_URL}?skill=syncWines`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wines: WINES })
+    }).catch(() => {});
+  }, 2000);
+}
+
+function renderWineTable() {
+  const tbody = document.getElementById('wineTableBody');
+  if (!WINES.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">등록된 와인이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = WINES.map((w, i) => `
+    <tr>
+      <td><input class="cell-input" value="${esc(w['이름'])}"
+        onchange="WINES[${i}]['이름']=this.value;persistWines()"></td>
+      <td><input class="cell-input" value="${esc(w['특징']||'')}" placeholder="맛/향 설명"
+        onchange="WINES[${i}]['특징']=this.value;persistWines()"></td>
+      <td><input class="cell-input" type="number" min="0" value="${w['가격']||''}" style="width:100px"
+        onchange="WINES[${i}]['가격']=parseInt(this.value)||0;persistWines()"></td>
+      <td><input class="cell-input" type="number" min="0" value="${parseInt(w['재고'])||0}" style="width:70px"
+        onchange="WINES[${i}]['재고']=parseInt(this.value)||0;persistWines()"></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="deleteWineRow(${i})">✕</button></td>
+    </tr>`).join('');
+}
+
+function addWineRow() {
+  WINES.push({ 이름: '새 와인', 특징: '', 가격: 0, 재고: 0 });
+  persistWines();
+  renderWineTable();
+}
+
+function deleteWineRow(i) {
+  if (!confirm(`"${WINES[i]['이름']}" 와인을 삭제할까요?`)) return;
+  WINES.splice(i, 1);
+  persistWines();
+  renderWineTable();
+}
+
+function esc(s) { return String(s).replace(/"/g, '&quot;'); }
+
+// ═══════════════════════════════════════════════════════════
 // 초기화
 // ═══════════════════════════════════════════════════════════
 async function init() {
@@ -1989,9 +2076,9 @@ async function init() {
   switchTab(startTab);
 
   // API에서 최신 메타 로드 후 재렌더
-  const updated = await loadMetaFromAPI();
+  const [updated] = await Promise.all([loadMetaFromAPI(), loadWines()]);
   if (updated) {
-    migrateRecipeTypes(); // API 데이터에도 마이그레이션 적용
+    migrateRecipeTypes();
     renderProdOptions();
     if (document.getElementById('tab-recipe').classList.contains('active')) renderRecipeTab();
     if (document.getElementById('tab-ingr').classList.contains('active'))   renderIngrTable();

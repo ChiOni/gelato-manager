@@ -46,6 +46,7 @@ function doGet(e) {
       case 'deleteProduction':     result = deleteProduction(p);       break;
       case 'listBackups':          result = listBackups();             break;
       case 'getWines':             result = getWines();                break;
+      case 'saveWines':            result = saveWines(p);              break;
       case 'getWineDetail':        result = getWineDetail(p);          break;
       case 'getRecipes':           result = getRecipes();              break;
       case 'getRecipesForKakao':  result = getRecipesForKakao();      break;
@@ -380,6 +381,18 @@ function getWineSheet() {
 
 function getWines() {
   return { data: sheetToJson(getWineSheet()) };
+}
+
+function saveWines(p) {
+  try {
+    var wines = JSON.parse(p.data || '[]');
+    var sheet = getWineSheet();
+    if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
+    wines.forEach(function(w) {
+      sheet.appendRow([w['이름'] || '', w['특징'] || '', w['가격'] || '', parseInt(w['재고']) || 0, new Date().toISOString()]);
+    });
+    return { ok: true };
+  } catch(e) { return { ok: false, error: e.message }; }
 }
 
 function getWineDetail(p) {
