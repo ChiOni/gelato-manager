@@ -196,6 +196,17 @@ async function addRecipe(params, ctx) {
 
 export default async function handler(req, ctx) {
   if (req.method === 'GET') {
+    const { searchParams } = new URL(req.url);
+    if (searchParams.get('seed') === '1') {
+      const [wines, recipes] = await Promise.all([
+        getData('wines', 'getWines'),
+        getData('recipes', 'getRecipes')
+      ]);
+      return new Response(
+        `✅ Redis 시드 완료\n와인 ${wines.length}개 · 레시피 ${recipes.length}개 캐시됨`,
+        { headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+      );
+    }
     return new Response('스쿱 카카오 스킬서버 정상 작동 중 🍦🍷', { status: 200 });
   }
   if (req.method !== 'POST') return new Response(null, { status: 405 });
