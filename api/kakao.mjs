@@ -35,7 +35,6 @@ async function redisDel(key) {
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return;
   await fetch(`${url}/del/${encodeURIComponent(key)}`, {
-    method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` }
   });
 }
