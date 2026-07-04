@@ -158,7 +158,7 @@ async function updateWineStock(wineName, quantity, stockAction, ctx) {
 // ─── 레시피 핸들러 ──────────────────────────────────────────────────────────
 
 async function getRecipeList() {
-  const recipes = await getData('recipes', 'getRecipesForKakao');
+  const recipes = await getData('recipes_v2', 'getRecipesForKakao');
   if (!recipes.length) return simpleText('등록된 레시피가 없습니다.');
   return {
     version: '2.0',
@@ -174,7 +174,7 @@ async function getRecipeList() {
 async function getRecipeDetail(menuName) {
   const name = String(menuName).replace(/\s*레시피$/, '').trim();
   if (!name) return simpleText('어떤 메뉴의 레시피를 확인할까요?');
-  const recipes = await getData('recipes', 'getRecipesForKakao');
+  const recipes = await getData('recipes_v2', 'getRecipesForKakao');
   const r = recipes.find(recipe => String(recipe['이름']).trim() === name);
   if (!r) return simpleText(`❓ "${name}" 레시피를 찾을 수 없습니다.`);
   return {
@@ -193,9 +193,9 @@ async function getRecipeDetail(menuName) {
 
 async function addRecipe(params, ctx) {
   if (!params.menu_name) return simpleText('❗ 레시피 이름을 입력해주세요.');
-  const recipes = await getData('recipes', 'getRecipesForKakao');
+  const recipes = await getData('recipes_v2', 'getRecipesForKakao');
   recipes.push({ 이름: params.menu_name, 재료: params.ingredients || '', 특징: params.feature || '' });
-  await redisSet('recipes', recipes);
+  await redisSet('recipes_v2', recipes);
   syncToSheet({ skillAction: 'addRecipe', menu_name: params.menu_name, ingredients: params.ingredients || '', feature: params.feature || '' }, ctx);
   return simpleText(`✅ "${params.menu_name}" 레시피가 추가되었습니다.`);
 }
@@ -236,10 +236,10 @@ export default async function handler(req, ctx) {
   if (req.method === 'GET') {
     if (searchParams.get('seed') === '1') {
       // 기존 캐시 삭제 후 최신 데이터로 재시드
-      await Promise.all([redisDel('wines'), redisDel('recipes')]);
+      await Promise.all([redisDel('wines'), redisDel('recipes_v2')]);
       const [wines, recipes] = await Promise.all([
         getData('wines', 'getWines'),
-        getData('recipes', 'getRecipesForKakao')
+        getData('recipes_v2', 'getRecipesForKakao')
       ]);
       return new Response(
         `✅ Redis 시드 완료\n와인 ${wines.length}개 · 레시피 ${recipes.length}개 캐시됨`,
