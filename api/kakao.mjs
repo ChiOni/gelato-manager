@@ -30,6 +30,16 @@ async function redisSet(key, value) {
   });
 }
 
+async function redisDel(key) {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return;
+  await fetch(`${url}/del/${encodeURIComponent(key)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+}
+
 async function getData(key, asAction) {
   let data = await redisGet(key);
   if (!data) {
@@ -149,7 +159,7 @@ async function updateWineStock(wineName, quantity, stockAction, ctx) {
 // ─── 레시피 핸들러 ──────────────────────────────────────────────────────────
 
 async function getRecipeList() {
-  const recipes = await getData('recipes', 'getRecipes');
+  const recipes = await getData('recipes', 'getRecipesForKakao');
   if (!recipes.length) return simpleText('등록된 레시피가 없습니다.');
   return {
     version: '2.0',
@@ -165,7 +175,7 @@ async function getRecipeList() {
 async function getRecipeDetail(menuName) {
   const name = String(menuName).replace(/\s*레시피$/, '').trim();
   if (!name) return simpleText('어떤 메뉴의 레시피를 확인할까요?');
-  const recipes = await getData('recipes', 'getRecipes');
+  const recipes = await getData('recipes', 'getRecipesForKakao');
   const r = recipes.find(recipe => String(recipe['이름']).trim() === name);
   if (!r) return simpleText(`❓ "${name}" 레시피를 찾을 수 없습니다.`);
   return {
@@ -184,7 +194,7 @@ async function getRecipeDetail(menuName) {
 
 async function addRecipe(params, ctx) {
   if (!params.menu_name) return simpleText('❗ 레시피 이름을 입력해주세요.');
-  const recipes = await getData('recipes', 'getRecipes');
+  const recipes = await getData('recipes', 'getRecipesForKakao');
   recipes.push({ 이름: params.menu_name, 재료: params.ingredients || '', 특징: params.feature || '' });
   await redisSet('recipes', recipes);
   syncToSheet({ skillAction: 'addRecipe', menu_name: params.menu_name, ingredients: params.ingredients || '', feature: params.feature || '' }, ctx);
@@ -226,9 +236,11 @@ export default async function handler(req, ctx) {
 
   if (req.method === 'GET') {
     if (searchParams.get('seed') === '1') {
+      // 기존 캐시 삭제 후 최신 데이터로 재시드
+      await Promise.all([redisDel('wines'), redisDel('recipes')]);
       const [wines, recipes] = await Promise.all([
         getData('wines', 'getWines'),
-        getData('recipes', 'getRecipes')
+        getData('recipes', 'getRecipesForKakao')
       ]);
       return new Response(
         `✅ Redis 시드 완료\n와인 ${wines.length}개 · 레시피 ${recipes.length}개 캐시됨`,

@@ -48,6 +48,7 @@ function doGet(e) {
       case 'getWines':             result = getWines();                break;
       case 'getWineDetail':        result = getWineDetail(p);          break;
       case 'getRecipes':           result = getRecipes();              break;
+      case 'getRecipesForKakao':  result = getRecipesForKakao();      break;
       case 'getWorkInstructions':  result = getWorkInstructions();     break;
       case 'kakaoSkill':           result = _handleKakaoSkillGet(p);   break;
       default:
@@ -470,6 +471,30 @@ function getRecipes() {
   return { data: sheetToJson(getRecipeSheet()) };
 }
 
+// 챗봇용 — 설정 시트 메타데이터에서 레시피 읽기 (웹앱과 동일한 소스)
+function getRecipesForKakao() {
+  try {
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var raw  = ss.getSheetByName('설정').getRange('B1').getValue();
+    var meta = JSON.parse(raw);
+
+    var ingMap = {};
+    (meta.ingredients || []).forEach(function(i) { ingMap[i.id] = i; });
+
+    var recipes = (meta.recipes || []).map(function(r) {
+      var 재료 = (r.ingredients || []).map(function(i) {
+        var ing = ingMap[i.id];
+        return ing ? (ing.name + ' ' + i.qty + (ing.unit || 'g')) : (i.id + ' ' + i.qty);
+      }).join(' · ');
+      return { 이름: r.name, 재료: 재료, 특징: '' };
+    });
+
+    return { data: recipes };
+  } catch (e) {
+    return { error: e.message, data: [] };
+  }
+}
+
 function _findRecipeRow(sheet, name) {
   var data    = sheet.getDataRange().getValues();
   var nameIdx = data[0].indexOf('이름');
@@ -765,8 +790,7 @@ function _kakaoSimpleText(text) {
       outputs: [{ simpleText: { text: text } }],
       quickReplies: [
         { label: '🍦 레시피',    action: 'block', messageText: '레시피 목록' },
-        { label: '🍷 와인 목록', action: 'block', messageText: '와인 목록' },
-        { label: '📋 업무 지시', action: 'block', messageText: '업무 지시' }
+        { label: '🍷 와인 목록', action: 'block', messageText: '와인 목록' }
       ]
     }
   };
