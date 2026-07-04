@@ -195,8 +195,9 @@ async function addRecipe(params, ctx) {
 // ─── 메인 핸들러 ─────────────────────────────────────────────────────────────
 
 export default async function handler(req, ctx) {
+  const { searchParams } = new URL(req.url);
+
   if (req.method === 'GET') {
-    const { searchParams } = new URL(req.url);
     if (searchParams.get('seed') === '1') {
       const [wines, recipes] = await Promise.all([
         getData('wines', 'getWines'),
@@ -214,7 +215,8 @@ export default async function handler(req, ctx) {
   let body;
   try { body = await req.json(); } catch { return ok(simpleText('요청 파싱 오류')); }
 
-  const skillAction = body?.action?.name || '';
+  // action.name은 Kakao 내부 ID라 사용 불가 → URL ?skill= 쿼리스트링으로 라우팅
+  const skillAction = searchParams.get('skill') || '';
   const params = body?.action?.params || {};
 
   try {
@@ -228,7 +230,7 @@ export default async function handler(req, ctx) {
       case 'getRecipeList':   result = await getRecipeList();                                                          break;
       case 'getRecipeDetail': result = await getRecipeDetail(params.menu_name || '');                                  break;
       case 'addRecipe':       result = await addRecipe(params, ctx);                                                   break;
-      default:                result = simpleText(`[DEBUG] action.name="${skillAction}" / keys=${Object.keys(body||{}).join(',')}`);
+      default:                result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
     }
     return ok(result);
   } catch (err) {
