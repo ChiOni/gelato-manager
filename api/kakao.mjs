@@ -228,7 +228,7 @@ export default async function handler(req, ctx) {
       case 'getRecipeList':   result = await getRecipeList();                                                          break;
       case 'getRecipeDetail': result = await getRecipeDetail(params.menu_name || '');                                  break;
       case 'addRecipe':       result = await addRecipe(params, ctx);                                                   break;
-      default:                result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
+      default:                result = simpleText(`[DEBUG] action.name="${skillAction}" / keys=${Object.keys(body||{}).join(',')}`);
     }
     return ok(result);
   } catch (err) {
