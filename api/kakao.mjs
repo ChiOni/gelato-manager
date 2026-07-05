@@ -177,13 +177,14 @@ async function getRecipeDetail(menuName) {
   const recipes = await getData('recipes_v2', 'getRecipesForKakao');
   const r = recipes.find(recipe => String(recipe['이름']).trim() === name);
   if (!r) return simpleText(`❓ "${name}" 레시피를 찾을 수 없습니다.`);
+  const ingredients = String(r['재료']).split(' · ').map(s => `• ${s}`).join('\n');
   return {
     version: '2.0',
     template: {
       outputs: [{
         basicCard: {
-          title: `🍦 ${name} 레시피 (1.5L 배치)`,
-          description: `${r['재료']}\n\n${r['특징']}`
+          title: `🍦 ${name} 레시피`,
+          description: ingredients
         }
       }],
       quickReplies: [{ label: '다른 레시피', action: 'message', messageText: '레시피 목록' }, ...QUICK]
