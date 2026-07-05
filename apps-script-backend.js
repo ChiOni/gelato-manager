@@ -76,6 +76,7 @@ function doPost(e) {
     let result;
     switch (p.action) {
       case 'saveMetadata':          result = saveMetadata(p.data);          break;
+      case 'saveWines':             result = saveWines(p);                  break;
       case 'addWine':               result = addWine(p);                    break;
       case 'updateWine':            result = updateWine(p);                 break;
       case 'deleteWine':            result = deleteWine(p);                 break;
