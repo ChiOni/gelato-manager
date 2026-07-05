@@ -380,6 +380,15 @@ export default async function handler(req, ctx) {
         headers: { 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
+    if (searchParams.get('setadmin') && searchParams.get('secret') === (process.env.ADMIN_SECRET || 'scoop2024')) {
+      const targetId = searchParams.get('setadmin');
+      const allowed = await getAllowedUsers();
+      const existing = allowed[targetId];
+      if (!existing) return new Response('User not found', { status: 404 });
+      allowed[targetId] = { ...existing, role: 'admin', promotedAt: new Date().toISOString() };
+      await redisSet('allowed_users', allowed);
+      return new Response(`✅ ${existing.name} → admin 승격 완료`, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
     if (searchParams.get('seed') === '1') {
       // 기존 캐시 삭제 후 최신 데이터로 재시드
       await Promise.all([redisDel('wines'), redisDel('recipes_v2')]);
