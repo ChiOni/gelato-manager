@@ -50,6 +50,104 @@ async function getData(key, asAction) {
   return data;
 }
 
+// ─── 사용자 인증 시스템 ──────────────────────────────────────────────────────
+
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'scoop2024';
+
+async function getAllowedUsers() { return (await redisGet('allowed_users')) || {}; }
+async function getPendingUsers()  { return (await redisGet('pending_users'))  || []; }
+
+async function authCheck(userId) {
+  const allowed = await getAllowedUsers();
+  return allowed[userId] || null;
+}
+
+// 새 사용자 등록 흐름 (이름 입력 → 승인 대기)
+async function handleNewUser(userId, utterance) {
+  const u = utterance.trim();
+
+  // 관리자 최초 등록: "관리자 [SECRET]"
+  if (u.startsWith('관리자 ')) {
+    const secret = u.slice(4).trim();
+    if (secret === ADMIN_SECRET) {
+      const allowed = await getAllowedUsers();
+      const hasAdmin = Object.values(allowed).some(v => v.role === 'admin');
+      if (hasAdmin) return simpleText('이미 관리자가 등록되어 있습니다.');
+      allowed[userId] = { name: '치원', role: 'admin', approvedAt: new Date().toISOString() };
+      await redisSet('allowed_users', allowed);
+      return simpleText('✅ 관리자 등록 완료! 환영합니다 치원님.');
+    }
+    return simpleText('❌ 비밀번호가 틀렸습니다.');
+  }
+
+  // 이름 입력 대기 중인 사용자
+  const regState = await redisGet(`reg_${userId}`);
+  if (regState === '1') {
+    if (!u || u.length > 20) return simpleText('이름을 다시 입력해주세요. (20자 이내)');
+    const pending = await getPendingUsers();
+    if (!pending.some(p => p.userId === userId)) {
+      pending.push({ userId, name: u, requestedAt: new Date().toISOString() });
+      await redisSet('pending_users', pending);
+    }
+    await redisDel(`reg_${userId}`);
+    return simpleText(`✅ "${u}"으로 승인 요청 완료!\n관리자 승인 후 이용 가능합니다.`);
+  }
+
+  // 대기 중인 사용자
+  const pending = await getPendingUsers();
+  if (pending.some(p => p.userId === userId)) {
+    return simpleText('⏳ 승인 대기 중입니다.\n관리자 승인 후 이용 가능합니다.');
+  }
+
+  // 완전히 새 사용자 — 이름 요청
+  await redisSet(`reg_${userId}`, '1');
+  return simpleText('👋 안녕하세요! 스쿱 봇입니다.\n\n이름을 입력해주세요.\n예: 홍길동');
+}
+
+// 관리자 전용 명령
+async function handleAdminCommand(u) {
+  if (u === '승인관리') {
+    const pending = await getPendingUsers();
+    if (!pending.length) return simpleText('✅ 승인 대기 중인 사용자가 없습니다.');
+    const list = pending.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+    return {
+      version: '2.0',
+      template: {
+        outputs: [{ simpleText: { text: `📋 승인 대기 목록\n${list}\n\n아래에서 선택하세요.` } }],
+        quickReplies: [
+          ...pending.map(p => ({ label: `✅ ${p.name}`, action: 'message', messageText: `승인 ${p.name}` })),
+          ...pending.map(p => ({ label: `❌ ${p.name}`, action: 'message', messageText: `거절 ${p.name}` })),
+        ]
+      }
+    };
+  }
+
+  if (u.startsWith('승인 ')) {
+    const name = u.slice(3).trim();
+    const pending = await getPendingUsers();
+    const target = pending.find(p => p.name === name);
+    if (!target) return simpleText(`"${name}"을 찾을 수 없습니다.`);
+    const allowed = await getAllowedUsers();
+    allowed[target.userId] = { name, role: 'user', approvedAt: new Date().toISOString() };
+    await Promise.all([
+      redisSet('allowed_users', allowed),
+      redisSet('pending_users', pending.filter(p => p.userId !== target.userId))
+    ]);
+    return simpleText(`✅ "${name}" 승인 완료!`);
+  }
+
+  if (u.startsWith('거절 ')) {
+    const name = u.slice(3).trim();
+    const pending = await getPendingUsers();
+    const filtered = pending.filter(p => p.name !== name);
+    if (filtered.length === pending.length) return simpleText(`"${name}"을 찾을 수 없습니다.`);
+    await redisSet('pending_users', filtered);
+    return simpleText(`❌ "${name}" 거절 완료.`);
+  }
+
+  return null; // 관리자 명령 아님
+}
+
 function syncToSheet(params, ctx) {
   const url = `${AS}?${new URLSearchParams({ action: 'kakaoSkill', ...params })}`;
   ctx?.waitUntil?.(fetch(url, { redirect: 'follow' }).catch(() => {}));
@@ -296,9 +394,23 @@ export default async function handler(req, ctx) {
   const skillAction = skill || '';
   const params = body?.action?.params || {};
   const utterance = body?.userRequest?.utterance || '';
+  const userId   = body?.userRequest?.user?.id   || '';
+
+  // ── 인증 체크 ──────────────────────────────────────────────────────────────
+  const userInfo = await authCheck(userId);
+  if (!userInfo) {
+    return ok(await handleNewUser(userId, utterance));
+  }
 
   try {
     let result;
+
+    // 관리자 전용 명령 우선 처리
+    if (userInfo.role === 'admin') {
+      const adminResult = await handleAdminCommand(utterance.trim());
+      if (adminResult) return ok(adminResult);
+    }
+
     switch (skillAction) {
       case 'getWineList':       result = await getWineList();                                                                         break;
       case 'getWineDetail':     result = await getWineDetail(params.wine_name || utterance);                                          break;
@@ -311,6 +423,20 @@ export default async function handler(req, ctx) {
       case 'handleUtterance':   result = await handleUtterance(utterance, ctx);                                                       break;
       default:                  result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
     }
+
+    // 관리자에게 승인 대기 알림 quickReply 추가
+    if (userInfo.role === 'admin' && result?.template) {
+      const pending = await getPendingUsers();
+      if (pending.length) {
+        result.template.quickReplies = result.template.quickReplies || [];
+        result.template.quickReplies.push({
+          label: `⚠️ 승인 대기 ${pending.length}명`,
+          action: 'message',
+          messageText: '승인관리'
+        });
+      }
+    }
+
     return ok(result);
   } catch (err) {
     return ok(simpleText('오류: ' + (err.message || '알 수 없는 오류')));
