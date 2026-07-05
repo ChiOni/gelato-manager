@@ -302,9 +302,18 @@ async function addRecipe(params, ctx) {
 // ─── 폴백 핸들러: utterance 파싱으로 라우팅 ─────────────────────────────────
 // 모든 버튼(action:message)이 발화로 전달되면 여기서 처리
 
-async function handleUtterance(utterance, ctx) {
+async function handleUtterance(utterance, ctx, userId) {
   const u = String(utterance || '').trim();
   if (!u) return simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
+
+  // 관리자 명령 (handleUtterance 경로에서도 동작하도록)
+  if (userId) {
+    const info = await authCheck(userId);
+    if (info?.role === 'admin') {
+      const adminResult = await handleAdminCommand(u);
+      if (adminResult) return adminResult;
+    }
+  }
 
   // "XX 레시피" → 레시피 상세
   if (u.endsWith('레시피')) return getRecipeDetail(u);
@@ -408,23 +417,27 @@ export default async function handler(req, ctx) {
     // 관리자 전용 명령 우선 처리
     if (userInfo.role === 'admin') {
       const adminResult = await handleAdminCommand(utterance.trim());
-      if (adminResult) return ok(adminResult);
+      if (adminResult) {
+        result = adminResult;
+      }
     }
 
-    switch (skillAction) {
-      case 'getWineList':       result = await getWineList();                                                                         break;
-      case 'getWineDetail':     result = await getWineDetail(params.wine_name || utterance);                                          break;
-      case 'addWine':           result = await addWine(params, ctx);                                                                  break;
-      case 'updateWine':        result = await updateWine(params, ctx);                                                               break;
-      case 'updateWineStock':   result = await updateWineStock(params.wine_name || '', params.quantity || '1', params.stock_action || 'add', ctx); break;
-      case 'getRecipeList':     result = await getRecipeList();                                                                       break;
-      case 'getRecipeDetail':   result = await getRecipeDetail(params.menu_name || utterance);                                        break;
-      case 'addRecipe':         result = await addRecipe(params, ctx);                                                                break;
-      case 'handleUtterance':   result = await handleUtterance(utterance, ctx);                                                       break;
-      default:                  result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
+    if (!result) {
+      switch (skillAction) {
+        case 'getWineList':       result = await getWineList();                                                                         break;
+        case 'getWineDetail':     result = await getWineDetail(params.wine_name || utterance);                                          break;
+        case 'addWine':           result = await addWine(params, ctx);                                                                  break;
+        case 'updateWine':        result = await updateWine(params, ctx);                                                               break;
+        case 'updateWineStock':   result = await updateWineStock(params.wine_name || '', params.quantity || '1', params.stock_action || 'add', ctx); break;
+        case 'getRecipeList':     result = await getRecipeList();                                                                       break;
+        case 'getRecipeDetail':   result = await getRecipeDetail(params.menu_name || utterance);                                        break;
+        case 'addRecipe':         result = await addRecipe(params, ctx);                                                                break;
+        case 'handleUtterance':   result = await handleUtterance(utterance, ctx, userId);                                              break;
+        default:                  result = simpleText('❓ 알 수 없는 요청입니다.\n메뉴에서 선택해주세요!');
+      }
     }
 
-    // 관리자에게 승인 대기 알림 quickReply 추가
+    // 관리자에게 승인 대기 알림 quickReply 추가 (모든 응답에 적용)
     if (userInfo.role === 'admin' && result?.template) {
       const pending = await getPendingUsers();
       if (pending.length) {
