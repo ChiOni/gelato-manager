@@ -441,15 +441,13 @@ export default async function handler(req, ctx) {
       }
     }
 
-    // 관리자에게 승인 대기 알림 quickReply 추가 (모든 응답에 적용)
+    // 관리자 전용: 항상 승인관리 버튼 표시 (대기자 있으면 뱃지)
     if (userInfo.role === 'admin' && result?.template) {
       const pending = await getPendingUsers();
-      if (pending.length) {
-        result.template.quickReplies = [
-          ...(result.template.quickReplies || []),
-          { label: `⚠️ 승인 대기 ${pending.length}명`, action: 'message', messageText: '승인관리' }
-        ];
-      }
+      const adminBtn = pending.length
+        ? { label: `⚠️ 승인 대기 ${pending.length}명`, action: 'message', messageText: '승인관리' }
+        : { label: '👤 승인관리', action: 'message', messageText: '승인관리' };
+      result.template.quickReplies = [...(result.template.quickReplies || []), adminBtn];
     }
 
     return ok(result);
