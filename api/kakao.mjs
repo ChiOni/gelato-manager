@@ -319,6 +319,14 @@ async function handleUtterance(utterance, ctx, userId) {
   if (u === '레시피 목록' || u === '레시피') return getRecipeList();
   if (u === '와인 목록' || u === '와인') return getWineList();
 
+  // 디버그: 내 정보 확인
+  if (u === '내정보') {
+    const info = userId ? await authCheck(userId) : null;
+    const role = info?.role || '미인증';
+    const name = info?.name || '-';
+    return simpleText(`🔍 내 정보\nID: ${userId || '(없음)'}\n이름: ${name}\n권한: ${role}`);
+  }
+
   // "XX 레시피" → 레시피 상세
   if (u.endsWith('레시피')) return getRecipeDetail(u);
 
@@ -366,6 +374,12 @@ export default async function handler(req, ctx) {
   }
 
   if (req.method === 'GET') {
+    if (searchParams.get('debug') === '1' && searchParams.get('secret') === (process.env.ADMIN_SECRET || 'scoop2024')) {
+      const [allowed, pending] = await Promise.all([getAllowedUsers(), getPendingUsers()]);
+      return new Response(JSON.stringify({ allowed, pending }, null, 2), {
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      });
+    }
     if (searchParams.get('seed') === '1') {
       // 기존 캐시 삭제 후 최신 데이터로 재시드
       await Promise.all([redisDel('wines'), redisDel('recipes_v2')]);
