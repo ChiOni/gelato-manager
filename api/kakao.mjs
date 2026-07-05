@@ -167,7 +167,7 @@ function ok(data) {
 }
 
 function simpleText(text) {
-  return { version: '2.0', template: { outputs: [{ simpleText: { text } }], quickReplies: QUICK } };
+  return { version: '2.0', template: { outputs: [{ simpleText: { text } }], quickReplies: [...QUICK] } };
 }
 
 // ─── 와인 핸들러 ─────────────────────────────────────────────────────────────
@@ -315,6 +315,10 @@ async function handleUtterance(utterance, ctx, userId) {
     }
   }
 
+  // 목록 명령
+  if (u === '레시피 목록' || u === '레시피') return getRecipeList();
+  if (u === '와인 목록' || u === '와인') return getWineList();
+
   // "XX 레시피" → 레시피 상세
   if (u.endsWith('레시피')) return getRecipeDetail(u);
 
@@ -441,12 +445,10 @@ export default async function handler(req, ctx) {
     if (userInfo.role === 'admin' && result?.template) {
       const pending = await getPendingUsers();
       if (pending.length) {
-        result.template.quickReplies = result.template.quickReplies || [];
-        result.template.quickReplies.push({
-          label: `⚠️ 승인 대기 ${pending.length}명`,
-          action: 'message',
-          messageText: '승인관리'
-        });
+        result.template.quickReplies = [
+          ...(result.template.quickReplies || []),
+          { label: `⚠️ 승인 대기 ${pending.length}명`, action: 'message', messageText: '승인관리' }
+        ];
       }
     }
 
