@@ -228,10 +228,30 @@ async function handleUtterance(utterance, ctx) {
   return simpleText(`🤔 "${u}"를 이해하지 못했어요.\n아래 메뉴에서 선택해주세요.`);
 }
 
+// ─── CORS 헬퍼 (웹앱 → Vercel 브라우저 요청용) ──────────────────────────────
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+function corsJson(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...CORS }
+  });
+}
+
 // ─── 메인 핸들러 ─────────────────────────────────────────────────────────────
 
 export default async function handler(req, ctx) {
   const { searchParams } = new URL(req.url);
+
+  // OPTIONS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS });
+  }
 
   if (req.method === 'GET') {
     if (searchParams.get('seed') === '1') {
@@ -253,27 +273,23 @@ export default async function handler(req, ctx) {
   let body;
   try { body = await req.json(); } catch { return ok(simpleText('요청 파싱 오류')); }
 
-  // 웹앱에서 직접 캐시 업데이트
+  // 웹앱에서 직접 캐시 업데이트 (CORS 포함)
   const skill = searchParams.get('skill');
   if (skill === 'syncRecipes') {
     const recipes = body?.recipes;
     if (Array.isArray(recipes)) {
       await redisSet('recipes_v2', recipes);
-      return new Response(JSON.stringify({ ok: true, count: recipes.length }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return corsJson({ ok: true, count: recipes.length });
     }
-    return new Response(JSON.stringify({ ok: false }), { status: 400 });
+    return corsJson({ ok: false }, 400);
   }
   if (skill === 'syncWines') {
     const wines = body?.wines;
     if (Array.isArray(wines)) {
       await redisSet('wines', wines);
-      return new Response(JSON.stringify({ ok: true, count: wines.length }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return corsJson({ ok: true, count: wines.length });
     }
-    return new Response(JSON.stringify({ ok: false }), { status: 400 });
+    return corsJson({ ok: false }, 400);
   }
 
   const skillAction = skill || '';
