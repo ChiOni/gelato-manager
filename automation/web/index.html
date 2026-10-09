@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스쿱앤십 메뉴 관리</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #f6f4f1;
+    --card: #ffffff;
+    --ink: #1d1a17;
+    --sub: #6b645d;
+    --faint: #a39b93;
+    --line: #e8e3dd;
+    --brand: #862727;
+    --brand-soft: #f6eaea;
+    --green: #1f9d55;
+    --green-soft: #e6f5ec;
+    --red: #d64545;
+    --red-soft: #fdeeee;
+    --amber: #c98a12;
+    --gray: #b8b1aa;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(29, 26, 23, .04), 0 4px 16px rgba(29, 26, 23, .05);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    letter-spacing: -0.01em;
+  }
+  button, input, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 160px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 42px; height: 42px; border-radius: 12px; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 20px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+  .tagline { margin: 2px 0 0; color: var(--sub); font-size: 13px; }
+  .conn { font-size: 12px; color: var(--sub); display: flex; align-items: center; gap: 6px; }
+  .conn i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; }
+  .conn.off i { background: var(--red); }
+
+  h2 { font-size: 13px; font-weight: 700; color: var(--sub); letter-spacing: .02em; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  h2 .num { width: 20px; height: 20px; border-radius: 6px; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 11px; }
+  section { margin-bottom: 36px; }
+
+  /* ---------- 준비물 ---------- */
+  .ready { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .rcard { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 16px 14px; border: 1px solid transparent; }
+  .rcard.red { border-color: #f3c9c9; }
+  .rtop { display: flex; align-items: center; gap: 10px; }
+  .light { width: 14px; height: 14px; border-radius: 50%; flex: none; background: var(--gray); position: relative; }
+  .light.green { background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+  .light.red { background: var(--red); box-shadow: 0 0 0 4px var(--red-soft); animation: pulse 1.6s ease-in-out infinite; }
+  .light.gray { background: var(--gray); box-shadow: 0 0 0 4px #efece8; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 7px var(--red-soft); } }
+  .rname { font-weight: 700; font-size: 15px; }
+  .rtitle { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--sub); text-align: right; }
+  .rcard.red .rtitle { color: var(--red); }
+  .rcard.green .rtitle { color: var(--green); }
+  .rdetail { margin: 8px 0 0; font-size: 13px; color: var(--sub); overflow-wrap: anywhere; }
+  .guide { margin: 12px 0 0; padding: 12px 12px 12px 30px; background: var(--red-soft); border-radius: 10px; font-size: 13px; line-height: 1.55; color: #5b2626; }
+  .guide li + li { margin-top: 6px; }
+  .guide b { color: var(--ink); }
+  .readybar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--sub); flex-wrap: wrap; }
+
+  /* ---------- 버튼 ---------- */
+  .btn { border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 14px; cursor: pointer; background: #efebe6; transition: background .15s, transform .05s; white-space: nowrap; }
+  .btn:hover { background: #e6e0d9; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn.primary { background: var(--ink); color: #fff; }
+  .btn.primary:hover { background: #3a3530; }
+  .btn.brand { background: var(--brand); color: #fff; }
+  .btn.brand:hover { background: #6f1f1f; }
+  .btn.danger { background: var(--red-soft); color: var(--red); }
+  .btn.danger:hover { background: #fadcdc; }
+  .btn.ghost { background: transparent; color: var(--sub); padding: 9px 10px; }
+  .btn.ghost:hover { background: #efebe6; color: var(--ink); }
+  .btn.sm { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+
+  /* ---------- 메뉴 관리 ---------- */
+  .blocked { background: var(--red-soft); color: #5b2626; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; font-size: 14px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .panel { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .phead { display: flex; align-items: center; gap: 10px; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+  .phead h3 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+  .count { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--green-soft); color: var(--green); }
+  .count.off { background: #efebe6; color: var(--sub); }
+  .phead .right { margin-left: auto; }
+  .search { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: #fbfaf8; outline: none; }
+  .search:focus { border-color: var(--ink); background: #fff; }
+  .searchrow { padding: 12px 18px 4px; }
+
+  .item { padding: 14px 18px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: start; }
+  .item:last-child { border-bottom: 0; }
+  .item.busy { background: #fbfaf8; }
+  .iname { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 11px; font-weight: 700; color: var(--brand); background: var(--brand-soft); padding: 1px 7px; border-radius: 99px; }
+  /* NEW / BEST 토글: 켜짐 = 메뉴판에 표시 */
+  .tgl { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; cursor: pointer; border: 1px dashed #cfc7bf; background: transparent; color: var(--faint); letter-spacing: .02em; transition: .15s; }
+  .tgl:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+  .tgl.on { border: 1px solid var(--brand); background: var(--brand); color: #fff; }
+  .tgl.on:hover:not(:disabled) { background: #6f1f1f; color: #fff; }
+  .tgl:disabled { cursor: not-allowed; opacity: .5; }
+  .checks { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  /* 배달만 OFF: 매장 판매중, 배달앱 숨김 */
+  .dtag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: #fff4dc; color: #8a5a00; border: 1px solid #f1d699; }
+  .item.doff .idesc { color: var(--faint); }
+  .checks .check { margin-right: 0; }
+  .idesc { grid-column: 1; color: var(--sub); font-size: 14px; overflow-wrap: anywhere; }
+  .iact { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 6px; align-items: center; }
+  .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #d9d2ca; border-top-color: var(--ink); animation: spin .8s linear infinite; display: inline-block; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .busytag { font-size: 12px; color: var(--sub); display: inline-flex; gap: 6px; align-items: center; }
+
+  .inline { grid-column: 1 / -1; margin-top: 6px; padding: 12px; border-radius: 10px; background: #fbfaf8; border: 1px solid var(--line); }
+  .inline textarea, .field input, .field textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; outline: none; resize: vertical; }
+  .inline textarea:focus, .field input:focus, .field textarea:focus { border-color: var(--ink); }
+  .inline .row, .formrow { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .inline p { margin: 0 0 10px; font-size: 14px; }
+  .seg { display: inline-flex; background: #efebe6; border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+  .seg button { border: 0; background: transparent; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; }
+  .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .hint { font-size: 12px; color: var(--sub); margin-right: auto; }
+
+  .addbox { padding: 14px 18px; border-bottom: 1px solid var(--line); background: #fcfbf9; }
+  .addbox .field { margin-bottom: 10px; }
+  .addbox label { display: block; font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 5px; }
+  .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sub); margin-right: auto; cursor: pointer; }
+  .check input { width: 16px; height: 16px; accent-color: var(--brand); }
+
+  .group { padding: 10px 18px 4px; font-size: 12px; font-weight: 700; color: var(--brand); letter-spacing: .02em; background: #fcfbf9; border-bottom: 1px solid var(--line); }
+  .empty { padding: 26px 18px; text-align: center; color: var(--faint); font-size: 14px; }
+
+  /* ---------- 작업 현황 ---------- */
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; pointer-events: none; padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .dockin { pointer-events: auto; width: 100%; max-width: 1056px; background: #1d1a17; color: #f4f1ed; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,.25); overflow: hidden; }
+  .dockhead { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; }
+  .dockhead b { font-size: 14px; white-space: nowrap; flex: none; }
+  .dockhead .spinner { flex: none; }
+  .dockhead .sum { font-size: 13px; color: #b9b1a8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dockhead .chev { margin-left: auto; color: #b9b1a8; font-size: 12px; white-space: nowrap; flex: none; }
+  .dockhead .sum { min-width: 0; }
+  .dockbody { max-height: 46vh; overflow-y: auto; border-top: 1px solid #36302b; }
+  .job { padding: 12px 16px; border-bottom: 1px solid #2c2723; }
+  .job:last-child { border-bottom: 0; }
+  .jtop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .jtitle { font-weight: 700; font-size: 14px; }
+  .jtime { font-size: 12px; color: #8f877f; margin-left: auto; }
+  .jstate { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+  .jstate.running { background: #3a342e; color: #f4d58d; }
+  .jstate.queued { background: #3a342e; color: #b9b1a8; }
+  .jstate.done { background: #1d3a29; color: #7fd6a2; }
+  .jstate.failed { background: #472222; color: #ff9d9d; }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+  .step { background: #26221e; border-radius: 10px; padding: 8px 10px; font-size: 12px; min-width: 0; }
+  .step .sh { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+  .step .sm2 { color: #a9a198; margin-top: 3px; overflow-wrap: anywhere; }
+  .step.failed .sm2 { color: #ff9d9d; }
+  .ico { width: 16px; text-align: center; }
+  .dockhead .spinner, .step .spinner { border-color: #4a433c; border-top-color: #f4d58d; width: 12px; height: 12px; }
+  .jobact { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .dockin .btn { background: #3a342e; color: #f4f1ed; }
+  .dockin .btn:hover { background: #4a433c; }
+
+  .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-20px); opacity: 0; background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; transition: .25s; z-index: 10; pointer-events: none; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 860px) {
+    .ready { grid-template-columns: 1fr; }
+    .cols { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding: 20px 14px 170px; }
+    .item { grid-template-columns: 1fr; }
+    .iact { grid-row: auto; grid-column: 1; justify-content: flex-start; margin-top: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>스쿱앤십 메뉴 관리</h1>
+        <p class="tagline">메뉴판(피그마) · 배달의민족 · 쿠팡이츠를 한 번에 바꿔요</p>
+      </div>
+    </div>
+    <div class="conn" id="conn"><i></i><span>서버 연결 중…</span></div>
+  </header>
+
+  <section>
+    <h2><span class="num">1</span>준비물 — 세 개 모두 초록불이어야 해요</h2>
+    <div class="ready" id="ready"></div>
+    <div class="readybar">
+      <span id="checkedAt"></span>
+      <button class="btn sm" id="checkBtn">배달앱 다시 점검</button>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span>메뉴 관리</h2>
+    <div id="blocked"></div>
+    <div class="cols">
+      <div class="panel">
+        <div class="phead">
+          <h3>판매중</h3><span class="count" id="liveCount">0</span>
+          <button class="btn sm primary right" id="addToggle">+ 새 메뉴</button>
+        </div>
+        <div id="addBox"></div>
+        <div id="liveList"></div>
+      </div>
+      <div class="panel">
+        <div class="phead">
+          <h3>비활성</h3><span class="count off" id="offCount">0</span>
+        </div>
+        <div class="searchrow"><input class="search" id="search" placeholder="메뉴 이름으로 찾기"></div>
+        <div id="offList"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="dock" id="dock"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = (s) => String(s || '').replace(/\s+/g, '');
+const SECT = { soldout: 'Sold out', seasonoff: 'Season off', later: 'See you later' };
+const DEST = [['soldout', 'Sold out (품절)'], ['seasonoff', 'Season off (계절 종료)'], ['later', 'See you later']];
+
+let S = null;               // 서버 상태
+let ui = { open: null, addOpen: false, dest: 'soldout', dockOpen: false, q: '' };
+let online = false;
+
+// ---------- 서버 통신 ----------
+async function api(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-menu-app': '1' }, body: JSON.stringify(body || {}) });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || '요청 실패');
+  return j;
+}
+function connect() {
+  const es = new EventSource('/api/events');
+  es.addEventListener('state', (e) => { online = true; const prev = S; S = JSON.parse(e.data); notifyFinished(prev, S); render(); });
+  es.onerror = () => { online = false; renderConn(); };
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200);
+}
+function notifyFinished(prev, next) {
+  if (!prev) return;
+  for (const j of next.jobs) {
+    const p = prev.jobs.find((x) => x.id === j.id);
+    if (p && p.state !== j.state && (j.state === 'done' || j.state === 'failed')) {
+      toast(j.state === 'done' ? `✅ ${j.resolvedName || j.name || ''} ${j.label} 완료` : `⚠️ ${j.resolvedName || j.name || ''} ${j.label} — 일부 실패. 아래 작업 현황을 확인하세요`);
+      if (j.state === 'failed') ui.dockOpen = true;
+    }
+  }
+}
+
+// ---------- 작업 ----------
+function activeJobs() { return (S?.jobs || []).filter((j) => j.state === 'queued' || j.state === 'running'); }
+function busyFor(name) { return activeJobs().find((j) => norm(j.resolvedName || j.name) === norm(name)); }
+async function submit(body, okMsg, { keepDock = false } = {}) {
+  try {
+    await api('/api/jobs', body);
+    ui.open = null;
+    if (!keepDock) ui.dockOpen = true;
+    toast(okMsg);
+    render();
+  } catch (e) { toast('⚠️ ' + e.message); }
+}
+
+// ---------- 렌더 ----------
+function renderConn() {
+  const c = $('#conn');
+  c.classList.toggle('off', !online);
+  c.querySelector('span').textContent = online ? '서버 연결됨' : '서버에 연결할 수 없어요 — 컴퓨터에서 메뉴 관리 서버가 켜져 있는지 확인하세요';
+}
+
+function renderReady() {
+  const st = S.status;
+  const names = { figma: '피그마 메뉴판', baemin: '배달의민족', coupang: '쿠팡이츠' };
+  $('#ready').innerHTML = ['figma', 'baemin', 'coupang'].map((k) => {
+    const s = st[k];
+    return `<div class="rcard ${s.light}">
+      <div class="rtop"><span class="light ${s.light}"></span><span class="rname">${names[k]}</span><span class="rtitle">${esc(s.title)}</span></div>
+      ${s.detail ? `<p class="rdetail">${esc(s.detail)}</p>` : ''}
+      ${s.light === 'red' && s.guide ? `<ol class="guide">${s.guide.map((g) => `<li>${esc(g).replace(/(Ctrl \+ K|chrome:\/\/extensions|&quot;[^&]+&quot;)/g, '<b>$1</b>')}</li>`).join('')}</ol>` : ''}
+    </div>`;
+  }).join('');
+  const checks = ['baemin', 'coupang'].map((k) => st[k].checkedAt).filter(Boolean);
+  $('#checkedAt').textContent = checks.length ? `마지막 점검 ${new Date(Math.min(...checks)).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}` : '배달앱 로그인 상태는 [다시 점검]으로 확인해요';
+  const checking = activeJobs().some((j) => j.cmd === 'check');
+  $('#checkBtn').disabled = checking;
+  $('#checkBtn').textContent = checking ? '점검 중…' : '배달앱 다시 점검';
+}
+
+function itemBusy(name) {
+  const j = busyFor(name);
+  if (!j) return '';
+  const ch = j.channels.find((c) => c.state === 'running');
+  return `<span class="busytag"><span class="spinner"></span>${j.state === 'queued' ? '대기 중' : `${ch ? ch.name + ' ' : ''}${esc(j.label)} 중`}</span>`;
+}
+
+// 판매중 메뉴: NEW·BEST 는 눌러서 켜고 끄는 토글, 그 외(계절 한정 등)는 표시만
+function badgeToggles(m, disabled) {
+  const has = (k) => m.badges.some((b) => b.replace(/\s/g, '').toLowerCase().includes(k));
+  const t = (k, label) => `<button class="tgl ${has(k) ? 'on' : ''}" data-act="badge" data-badge="${k}" data-on="${has(k) ? 1 : 0}" data-name="${esc(m.name)}" title="눌러서 메뉴판 ${label} 표시 ${has(k) ? '끄기' : '켜기'}" ${disabled ? 'disabled' : ''}>${label}</button>`;
+  const others = m.badges.filter((b) => !/^(new|☆?best)$/i.test(b.replace(/\s/g, '')));
+  return t('new', 'NEW') + t('best', '☆ BEST') + others.map((b) => `<span class="badge">${esc(b)}</span>`).join('');
+}
+
+function renderLive(canEdit) {
+  const live = S.menu?.live || [];
+  $('#liveCount').textContent = live.length;
+  $('#addToggle').disabled = !canEdit;
+  $('#addToggle').textContent = ui.addOpen ? '닫기' : '+ 새 메뉴';
+
+  $('#addBox').innerHTML = ui.addOpen ? `<form class="addbox" id="addForm" autocomplete="off">
+      <div class="field"><label for="addName">메뉴 이름</label><input id="addName" maxlength="30" placeholder="예) 흑임자 크림" required></div>
+      <div class="field"><label for="addDesc">한 줄 설명</label><input id="addDesc" maxlength="60" placeholder="예) 고소한 흑임자에 부드러운 크림을 더한" required></div>
+      <div class="formrow">
+        <span class="checks" style="margin:0 auto 0 0"><label class="check"><input type="checkbox" id="addNew" checked> 메뉴판에 NEW 표시</label><label class="check"><input type="checkbox" id="addBest"> ☆ BEST 표시</label></span>
+        <button type="button" class="btn ghost" data-act="addCancel">취소</button>
+        <button class="btn brand">추가하기</button>
+      </div>
+      <div class="hint" style="margin-top:8px">메뉴판 판매중 맨 아래에 추가되고, 배민(일반·리뷰)·쿠팡에 주문 가능한 옵션으로 추가돼요.</div>
+    </form>` : '';
+
+  if (!S.menu) { $('#liveList').innerHTML = `<div class="empty">피그마 메뉴판을 불러오는 중이에요…</div>`; return; }
+  if (!live.length) { $('#liveList').innerHTML = `<div class="empty">판매중인 메뉴가 없어요</div>`; return; }
+  $('#liveList').innerHTML = live.map((m) => {
+    const busy = itemBusy(m.name);
+    const open = ui.open && norm(ui.open.name) === norm(m.name) ? ui.open.kind : null;
+    const dis = !canEdit || busy ? 'disabled' : '';
+    let inline = '';
+    if (open === 'edit') inline = `<div class="inline">
+        <textarea id="editDesc" rows="2" maxlength="60">${esc(m.desc)}</textarea>
+        <div class="row"><span class="hint">피그마 메뉴판 설명만 바뀌어요</span>
+          <button class="btn ghost sm" data-act="close">취소</button>
+          <button class="btn primary sm" data-act="saveDesc" data-name="${esc(m.name)}">저장</button></div></div>`;
+    if (open === 'off') {
+      const dests = m.deliveryOff ? DEST : [...DEST, ['deliveryOff', '🛵 배달만 OFF (매장 판매 유지)']];
+      const onlyDelivery = ui.dest === 'deliveryOff';
+      inline = `<div class="inline">
+        <p>${onlyDelivery
+          ? `<b>${esc(m.name)}</b>을(를) <b>배달에서만</b> 끌까요? 메뉴판(매장)에는 판매중으로 그대로 두고, 배민·쿠팡에서만 숨겨요.`
+          : `<b>${esc(m.name)}</b>을(를) 비활성화할까요? 메뉴판에서 옮겨지고, 배민·쿠팡에서 숨김 처리돼요.`}</p>
+        <div class="seg">${dests.map(([k, l]) => `<button data-act="dest" data-dest="${k}" class="${ui.dest === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="row"><button class="btn ghost sm" data-act="close">취소</button>
+          <button class="btn danger sm" data-act="confirmOff" data-name="${esc(m.name)}">${onlyDelivery ? '배달만 끄기' : '비활성화'}</button></div></div>`;
+    }
+    if (open === 'don') inline = `<div class="inline">
+        <p><b>${esc(m.name)}</b>을(를) 배달에서도 다시 판매할까요? 배민·쿠팡에서 주문 가능하게 바꿔요.</p>
+        <div class="row"><button class="btn ghost sm" data-act="close">취소</button>
+          <button class="btn brand sm" data-act="confirmDon" data-name="${esc(m.name)}">배달 켜기</button></div></div>`;
+    return `<div class="item ${busy ? 'busy' : ''} ${m.deliveryOff ? 'doff' : ''}">
+      <div class="iname">${esc(m.name)}${badgeToggles(m, !!(!canEdit || busy))}${m.deliveryOff ? '<span class="dtag" title="메뉴판(매장)에는 판매중, 배민·쿠팡에서는 숨김">🛵 배달 OFF</span>' : ''}</div>
+      <div class="idesc">${esc(m.desc)}</div>
+      <div class="iact">${busy || `<button class="btn ghost sm" data-act="edit" data-name="${esc(m.name)}" ${dis}>설명 수정</button>
+        ${m.deliveryOff ? `<button class="btn sm brand" data-act="don" data-name="${esc(m.name)}" ${dis}>배달 켜기</button>` : ''}
+        <button class="btn sm" data-act="off" data-name="${esc(m.name)}" ${dis}>비활성화</button>`}</div>
+      ${inline}
+    </div>`;
+  }).join('');
+}
+
+function renderOff(canEdit) {
+  const groups = ['soldout', 'seasonoff', 'later'].map((k) => [k, S.menu?.[k] || []]);
+  const total = groups.reduce((n, [, l]) => n + l.length, 0);
+  $('#offCount').textContent = total;
+  if (!S.menu) { $('#offList').innerHTML = `<div class="empty">불러오는 중…</div>`; return; }
+  const q = norm(ui.q);
+  const html = groups.map(([k, list]) => {
+    const rows = list.filter((m) => !q || norm(m.name).includes(q));
+    if (!rows.length) return '';
+    return `<div class="group">${SECT[k]} · ${rows.length}</div>` + rows.map((m) => {
+      const busy = itemBusy(m.name);
+      const open = ui.open && ui.open.kind === 'on' && norm(ui.open.name) === norm(m.name);
+      return `<div class="item ${busy ? 'busy' : ''}">
+        <div class="iname">${esc(m.name)}</div>
+        <div class="idesc">${esc(m.desc)}</div>
+        <div class="iact">${busy || `<button class="btn sm" data-act="on" data-name="${esc(m.name)}" ${!canEdit ? 'disabled' : ''}>활성화</button>`}</div>
+        ${open ? `<div class="inline"><p><b>${esc(m.name)}</b>을(를) 다시 판매할까요? 메뉴판 판매중으로 옮기고, 배민·쿠팡에서 주문 가능하게 바꿔요. (배달앱에 없으면 새로 추가)</p>
+          <div class="checks"><label class="check"><input type="checkbox" id="onNew"> 메뉴판에 NEW 표시</label><label class="check"><input type="checkbox" id="onBest"> 메뉴판에 ☆ BEST 표시</label></div>
+          <div class="row"><button class="btn ghost sm" data-act="close">취소</button>
+          <button class="btn brand sm" data-act="confirmOn" data-name="${esc(m.name)}">활성화</button></div></div>` : ''}
+      </div>`;
+    }).join('');
+  }).join('');
+  $('#offList').innerHTML = html || `<div class="empty">${q ? '찾는 메뉴가 없어요' : '비활성 메뉴가 없어요'}</div>`;
+}
+
+function stepIcon(st) {
+  return { pending: '<span class="ico">·</span>', running: '<span class="spinner"></span>', done: '<span class="ico">✅</span>', failed: '<span class="ico">❌</span>', skipped: '<span class="ico">⏭</span>' }[st] || '';
+}
+function renderDock() {
+  const jobs = S.jobs || [];
+  if (!jobs.length) { $('#dock').innerHTML = ''; return; }
+  // 작업 1건만 표시: 진행 중인 작업이 있으면 그것, 없으면 가장 최근 작업 (이전 기록은 숨김)
+  const act = activeJobs();
+  const cur = jobs.find((j) => j.state === 'running') || jobs[0];
+  const waiting = act.filter((j) => j !== cur).length;
+  let sum;
+  if (cur.state === 'running') {
+    const ch = cur.channels.find((c) => c.state === 'running');
+    sum = `<span class="spinner"></span><b>${esc(cur.resolvedName || cur.name)} ${esc(cur.label)}</b><span class="sum">${ch ? `${ch.name} ${esc(ch.progress || '진행 중')}` : ''}${waiting ? ` · 대기 ${waiting}건` : ''}</span>`;
+  } else {
+    sum = `<b>작업 현황</b><span class="sum">${esc(cur.resolvedName || cur.name || '')} ${esc(cur.label)} ${cur.state === 'done' ? '완료' : cur.state === 'failed' ? '— 실패 있음' : '대기 중'}${waiting ? ` · 대기 ${waiting}건` : ''}</span>`;
+  }
+  const time = (t) => t ? new Date(t).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+  const stateLabel = { queued: '대기', running: '진행 중', done: '완료', failed: '실패 있음' };
+  $('#dock').innerHTML = `<div class="dockin">
+    <div class="dockhead" data-act="dock">${sum}<span class="chev">${ui.dockOpen ? '접기 ▾' : '펼치기 ▴'}</span></div>
+    ${ui.dockOpen ? `<div class="dockbody">${[cur].map((j) => `<div class="job">
+      <div class="jtop"><span class="jtitle">${esc(j.resolvedName || j.name || '')} ${esc(j.label)}</span><span class="jstate ${j.state}">${stateLabel[j.state]}</span>${j.dryRun ? '<span class="jstate queued">미리보기</span>' : ''}<span class="jtime">${time(j.createdAt)}</span></div>
+      <div class="steps">${j.channels.map((c) => `<div class="step ${c.state}"><div class="sh">${stepIcon(c.state)}${c.name}</div><div class="sm2">${esc(c.state === 'running' ? (c.progress || '진행 중') : c.message || (c.state === 'pending' ? '대기' : ''))}</div></div>`).join('')}</div>
+      ${j.state === 'failed' ? `<div class="jobact"><button class="btn sm" data-act="retry" data-id="${j.id}">실패한 곳만 다시 시도</button></div>` : ''}
+    </div>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function render() {
+  renderConn();
+  if (!S) return;
+  const figmaOk = S.status.figma.light === 'green';
+  renderReady();
+  $('#blocked').innerHTML = figmaOk ? '' : `<div class="blocked">🔴 피그마 메뉴판이 연결되어야 메뉴를 바꿀 수 있어요. 위 <b>1. 준비물</b>의 안내를 따라주세요.</div>`;
+  const focus = document.activeElement?.id;
+  const keep = focus && ['addName', 'addDesc', 'editDesc', 'search'].includes(focus) ? { id: focus, v: document.activeElement.value, s: document.activeElement.selectionStart } : null;
+  const addVals = ui.addOpen && $('#addName') ? { n: $('#addName').value, d: $('#addDesc').value, w: $('#addNew').checked, b: $('#addBest').checked } : null;
+  const editVal = $('#editDesc')?.value;
+  renderLive(figmaOk);
+  renderOff(figmaOk);
+  renderDock();
+  if (addVals && $('#addName')) { $('#addName').value = addVals.n; $('#addDesc').value = addVals.d; $('#addNew').checked = addVals.w; $('#addBest').checked = addVals.b; }
+  if (editVal != null && $('#editDesc')) $('#editDesc').value = editVal;
+  if (keep && document.getElementById(keep.id)) { const el = document.getElementById(keep.id); el.focus(); try { el.setSelectionRange(keep.s, keep.s); } catch {} }
+}
+
+// ---------- 이벤트 ----------
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const act = b.dataset.act, name = b.dataset.name;
+  if (act === 'edit') ui.open = { kind: 'edit', name };
+  else if (act === 'off') { ui.open = { kind: 'off', name }; ui.dest = 'soldout'; }
+  else if (act === 'on') ui.open = { kind: 'on', name };
+  else if (act === 'close') ui.open = null;
+  else if (act === 'dest') { ui.dest = b.dataset.dest; }
+  else if (act === 'addCancel') ui.addOpen = false;
+  else if (act === 'dock') ui.dockOpen = !ui.dockOpen;
+  else if (act === 'saveDesc') {
+    const desc = $('#editDesc').value.trim();
+    if (!desc) return toast('설명을 입력하세요');
+    return submit({ cmd: 'setDesc', name, desc }, `'${name}' 설명 수정을 시작했어요`);
+  }
+  else if (act === 'confirmOff') return submit({ cmd: ui.dest, name }, ui.dest === 'deliveryOff' ? `'${name}' 배달만 끄는 중이에요 (1~3분)` : `'${name}' 비활성화를 시작했어요 (1~3분)`);
+  else if (act === 'don') ui.open = { kind: 'don', name };
+  else if (act === 'confirmDon') return submit({ cmd: 'deliveryOn', name }, `'${name}' 배달 다시 켜는 중이에요 (1~3분)`);
+  else if (act === 'confirmOn') {
+    const badges = [...($('#onNew')?.checked ? ['NEW'] : []), ...($('#onBest')?.checked ? ['best'] : [])];
+    return submit({ cmd: 'restore', name, badges }, `'${name}' 활성화를 시작했어요 (1~3분)`);
+  }
+  else if (act === 'badge') {
+    const on = b.dataset.on !== '1', label = b.dataset.badge === 'new' ? 'NEW' : 'BEST';
+    return submit({ cmd: 'setBadge', name, badge: b.dataset.badge, on }, `'${name}' ${label} ${on ? '켜는' : '끄는'} 중이에요`, { keepDock: true });
+  }
+  else if (act === 'retry') { api(`/api/jobs/${b.dataset.id}/retry`).then(() => toast('다시 시도합니다'), (er) => toast('⚠️ ' + er.message)); return; }
+  render();
+  if (act === 'edit') { const t = $('#editDesc'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+});
+$('#addToggle').addEventListener('click', () => { ui.addOpen = !ui.addOpen; render(); if (ui.addOpen) $('#addName').focus(); });
+document.addEventListener('submit', (e) => {
+  if (e.target.id !== 'addForm') return;
+  e.preventDefault();
+  const name = $('#addName').value.trim(), desc = $('#addDesc').value.trim(), isNew = $('#addNew').checked, isBest = $('#addBest').checked;
+  if (!name || !desc) return toast('이름과 설명을 모두 입력하세요');
+  const all = S.menu ? Object.values(S.menu).flat() : [];
+  const dup = all.find((m) => norm(m.name) === norm(name));
+  if (dup) return toast(`'${dup.name}'은(는) 이미 있는 메뉴예요. 비활성 목록에서 [활성화]를 눌러주세요`);
+  ui.addOpen = false;
+  submit({ cmd: 'add', name, desc, isNew, isBest }, `'${name}' 추가를 시작했어요 (1~3분)`);
+});
+$('#search').addEventListener('input', (e) => { ui.q = e.target.value; renderOff(S?.status.figma.light === 'green'); });
+$('#checkBtn').addEventListener('click', () => submit({ cmd: 'check' }, '배달앱 점검을 시작했어요'));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ui.open) { ui.open = null; render(); } });
+
+connect();
+</script>
+</body>
+</html>

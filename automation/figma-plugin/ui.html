@@ -1,0 +1,53 @@
+<style>
+  body { font: 12px/1.5 Pretendard, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 12px; color: #1e1e1e; }
+  #status { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 8px; }
+  #dot { width: 8px; height: 8px; border-radius: 50%; background: #bbb; }
+  #dot.on { background: #14ae5c; }
+  #log { height: 150px; overflow-y: auto; background: #f5f5f5; border-radius: 6px; padding: 6px 8px; font-size: 11px; white-space: pre-wrap; }
+  .err { color: #c62828; }
+</style>
+<div id="status"><span id="dot"></span><span id="label">메뉴 관리 서버 연결 대기 중…</span></div>
+<div id="log">이 창을 열어둔 채로 두세요. (메뉴 관리 페이지/menu 명령이 이 창을 통해 피그마를 수정합니다)</div>
+<script>
+  const URL = 'ws://localhost:3055';
+  const dot = document.getElementById('dot');
+  const label = document.getElementById('label');
+  const logEl = document.getElementById('log');
+  let ws;
+  let version = 0;
+
+  function log(text, err) {
+    const line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString('ko-KR', { hour12: false }) + '  ' + text;
+    if (err) line.className = 'err';
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function connect() {
+    ws = new WebSocket(URL);
+    ws.onopen = () => { dot.className = 'on'; label.textContent = '연결됨 — 이 창을 닫지 마세요'; ws.send(JSON.stringify({ hello: 'figma-plugin', version })); };
+    ws.onclose = () => { dot.className = ''; label.textContent = '메뉴 관리 서버 연결 대기 중…'; setTimeout(connect, 1500); };
+    ws.onerror = () => {};
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.id) parent.postMessage({ pluginMessage: msg }, '*');
+    };
+  }
+
+  window.onmessage = (e) => {
+    const res = e.data.pluginMessage;
+    if (!res) return;
+    if (res.version && !res.id) {
+      version = res.version;
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ hello: 'figma-plugin', version }));
+      return;
+    }
+    if (res.progress) { log('… ' + res.progress); if (ws && ws.readyState === 1) ws.send(JSON.stringify(res)); return; }
+    if (res.ok) { if (res.result.changed) log(res.result.message); } // 주기적 상태 조회는 기록하지 않음
+    else log(res.error, true);
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(res));
+  };
+
+  connect();
+</script>

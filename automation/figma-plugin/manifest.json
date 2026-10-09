@@ -1,0 +1,14 @@
+{
+  "name": "메뉴판 자동화",
+  "id": "gelato-menu-bridge",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["ws://localhost:3055"],
+    "reasoning": "로컬 menu CLI(ws://localhost:3055)에서 메뉴 변경 명령을 받기 위해 사용"
+  }
+}
