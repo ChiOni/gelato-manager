@@ -1,5 +1,6 @@
 // 와인 탭 서버 — /api/wine/* 와 /wine.js · /wine.css 를 처리한다.
-// 젤라또와 완전히 분리: 상태·SSE·작업 큐를 따로 쓰고, server.mjs 는 요청을 넘기기만 한다.
+// 목록의 주인은 포스다. [포스에서 불러오기] 를 누르면 포스 와인이 그대로 판매중/비활성 두 칸이 된다.
+// 젤라또와는 상태·SSE·작업 큐를 따로 쓴다.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,7 +35,6 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
     return {
       wines: db.wines,
       posSeenAt: db.posSeenAt,
-      posUnknown: db.posUnknown || [],
       posExcluded: db.posExcluded || [],
       kinds: store.KINDS,
       pending: pos.pendingWineIds(),
@@ -52,23 +52,22 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
 
   // ---------- 포스 작업 ----------
 
-  // 노출 ON/OFF. 성공해야 장부를 바꾼다 (auto=true 인 자동 비활성은 장부를 먼저 바꿔둔 상태로 들어온다)
+  // 노출 ON/OFF. 성공해야 목록을 옮긴다 (auto=true 인 자동 비활성은 이미 옮겨둔 상태로 들어온다)
   function queueExpose(w, on, { auto = false } = {}) {
     return pos.enqueue({
       kind: 'expose',
       label: on ? '판매 시작' : '비활성으로 옮기기',
-      name: w.name,
+      name: store.label(w),
       wineId: w.id,
       auto,
-      progress: `포스에서 '${w.name}' 를 찾는 중…`,
+      progress: `포스에서 '${store.label(w)}' 를 찾는 중…`,
       arg: { posName: w.posName, posPrice: w.posPrice, on },
       okMessage: () => `포스 노출 ${on ? 'ON' : 'OFF'} 확인됨`,
-      then: (out) => {
+      then: () => {
         const t = store.byId(w.id);
         if (!t) return;
         t.active = on;
         t.posExpose = on;
-        if (out.name) t.posOcrName = out.name;
         t.posSyncAt = Date.now();
         t.posState = 'ok';
         t.posNote = '';
@@ -78,8 +77,8 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
       onFail: (e) => {
         const t = store.byId(w.id);
         if (!t) return;
-        // 자동 비활성(다 팔림)은 장부가 사실이므로 되돌리지 않고 어긋남만 표시한다.
-        // 수동 전환은 장부를 미리 바꾸지 않으므로 되돌릴 것이 없다.
+        // 자동 비활성(다 팔림)은 사실이므로 되돌리지 않고 어긋남만 표시한다.
+        // 수동 전환은 미리 옮기지 않으므로 되돌릴 것이 없다.
         t.posState = 'failed';
         t.posNote = `포스 노출을 ${on ? '켜지' : '끄지'} 못했어요: ${String(e.message || e)}`;
         t.updatedAt = Date.now();
@@ -88,17 +87,17 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
     });
   }
 
-  function queueAdd(w, expose) {
+  function queueAdd(w, nameEn, expose) {
     return pos.enqueue({
       kind: 'add',
       label: '포스에 등록',
-      name: w.name,
+      name: w.posName,
       wineId: w.id,
-      progress: `포스에 '${w.name}' 를 입력하는 중…`,
+      progress: `포스에 '${w.posName}' 를 입력하는 중…`,
       arg: {
         posName: w.posName,
-        kioskName: w.name,
-        kioskNameEn: w.nameEn || w.name,
+        kioskName: w.posName,
+        kioskNameEn: nameEn || w.posName,
         desc: w.desc,
         price: w.posPrice,
         expose: !!expose,
@@ -135,37 +134,63 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
       name: '',
       progress: '포스 와인 목록을 읽는 중… (20~40초)',
       arg: { wines: db.wines.map((w) => ({ id: w.id, posName: w.posName, posPrice: w.posPrice })) },
-      okMessage: (out) => `포스 ${out.count}개 읽음 · 장부 ${out.matched.length}개 대조${out.missing.length ? ` · 못 찾음 ${out.missing.length}개` : ''}${out.unknown.length ? ` · 장부에 없음 ${out.unknown.length}개` : ''}`,
+      okMessage: (out) => {
+        const added = out.unknown.length, gone = out.missing.length;
+        return `와인 ${out.matched.length + added}개${added ? ` · 새로 ${added}개` : ''}${gone ? ` · 포스에서 사라진 ${gone}개` : ''}`;
+      },
       then: (out) => applySync(out),
     });
   }
 
-  // 포스에서 읽은 결과를 장부에 반영 — 노출 상태는 포스가 사실이므로 포스 값으로 맞춘다
+  // 포스에서 읽은 결과가 곧 목록이다 — 맞춰보고, 새로 생긴 건 바로 넣고, 없어진 건 뺀다.
   function applySync(out) {
     const db = store.load();
+    const keep = [];
+    const seen = new Set();
+
     for (const m of out.matched) {
       const w = store.byId(m.id);
       if (!w) continue;
-      w.posExpose = !!m.expose;
-      w.active = !!m.expose;
       w.posOcrName = m.posOcrName;
+      if (m.price) w.posPrice = m.price;   // 포스에서 가격을 바꿨으면 따라간다
+      w.posExpose = !!m.expose;
+      w.active = !!m.expose;               // 판매중/비활성은 포스 노출이 정한다
       w.posSyncAt = Date.now();
       w.posState = 'ok';
-      w.posNote = m.price !== w.posPrice
-        ? `포스 가격(${(m.price || 0).toLocaleString('ko-KR')}원)이 글라스 가격과 달라요. 포스에서 기본가격을 맞춰 주세요.`
-        : '';
+      w.posNote = '';
+      keep.push(w);
+      seen.add(w.id);
     }
-    for (const ms of out.missing) {
-      const w = store.byId(ms.id);
-      if (!w) continue;
-      w.posState = 'missing';
-      w.posSyncAt = Date.now();
-      w.posNote = '포스 와인 목록에서 찾지 못했어요. 포스 상품명·가격이 장부와 같은지 확인해 주세요.';
+
+    // 포스에 있는데 우리가 모르던 와인 → 등록 절차 없이 바로 목록에 넣는다
+    for (const u of out.unknown) {
+      const w = store.restoreOrphan(store.create({ posName: u.name, posPrice: u.price, expose: u.expose }));
+      keep.push(w);
+      seen.add(w.id);
     }
-    db.posUnknown = out.unknown;
-    db.posExcluded = out.excluded;
+
+    // 포스에서 사라진 와인 → 목록에서 빼고 적어둔 값만 보관.
+    // 단 지금 포스에 등록하는 중인 것은 아직 안 보이는 게 정상이라 그대로 둔다.
+    for (const w of db.wines) {
+      if (seen.has(w.id)) continue;
+      if (w.posState === 'adding') { keep.push(w); continue; }
+      store.toOrphan(w);
+    }
+
+    db.wines = keep.sort((a, b) => store.label(a).localeCompare(store.label(b), 'ko'));
     db.posSeenAt = Date.now();
+    db.posExcluded = out.excluded;
     store.save();
+  }
+
+  // 미개봉 0 + 개봉 안 함 = 다 팔림 → 비활성으로 옮기고 포스 노출을 끈다
+  function soldOutCheck(w) {
+    if (w.stock !== 0 || w.opened || !w.active) return null;
+    w.active = false;
+    w.updatedAt = Date.now();
+    store.save();
+    queueExpose(w, false, { auto: true });
+    return `'${store.label(w)}' 다 팔렸어요. 비활성으로 옮기고 포스 노출을 끄는 중이에요`;
   }
 
   // ---------- 라우팅 ----------
@@ -215,13 +240,13 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
         if (pos.pendingWineIds().includes(w.id)) throw new Error('이 와인은 포스 작업이 진행 중이에요. 끝난 뒤에 다시 해주세요.');
       };
 
-      // 포스에서 불러오기
+      // 포스에서 불러오기 — 이게 목록을 만드는 유일한 경로
       if (p === '/api/wine/sync') {
         if (pos.isBusy()) return send(res, 400, { error: '이미 포스 작업이 진행 중이에요.' }), true;
         return send(res, 200, { job: queueSync() }), true;
       }
 
-      // 기능 1 — 활성/비활성 전환 (포스 성공 후 장부 반영)
+      // 판매중 / 비활성 전환 (포스 노출 토글)
       if (p === '/api/wine/expose') {
         const w = need(body.id);
         lock(w);
@@ -233,7 +258,7 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
         return send(res, 200, { job }), true;
       }
 
-      // 기능 2·3 — 개봉 병 ON/OFF (포스 호출 없음 → 즉시 반영)
+      // 개봉 병 ON/OFF — 포스를 건드리지 않으므로 즉시 반영
       if (p === '/api/wine/open') {
         const w = need(body.id);
         const on = !!body.on;
@@ -248,22 +273,14 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
         }
         w.updatedAt = Date.now();
         store.save();
-        let note = on
-          ? `'${w.name}' 개봉했어요. 미개봉 ${w.stock}병 남음`
-          : `'${w.name}' 다 마신 것으로 기록했어요`;
-        // 기능 3 — 미개봉 0 + 개봉 OFF = 다 팔림 → 자동 비활성 + 포스 노출 OFF
-        if (!w.opened && w.stock === 0 && w.active) {
-          w.active = false;
-          w.updatedAt = Date.now();
-          store.save();
-          queueExpose(w, false, { auto: true });
-          note = `'${w.name}' 다 팔렸어요. 비활성으로 옮기고 포스 노출을 끄는 중이에요`;
-        }
+        const note = soldOutCheck(w) || (on
+          ? `'${store.label(w)}' 개봉했어요. 미개봉 ${w.stock}병 남음`
+          : `'${store.label(w)}' 다 마신 것으로 기록했어요`);
         push();
         return send(res, 200, { wine: w, note }), true;
       }
 
-      // 재고 수정 (입고 · 바틀 판매 · 파손) — 포스와 무관한 장부 수정
+      // 미개봉 재고 수정 (입고 · 바틀 판매 · 파손) — 목록에서 바로 누르는 ＋/−
       if (p === '/api/wine/stock') {
         const w = need(body.id);
         const next = body.delta !== undefined
@@ -273,96 +290,56 @@ export function wineRoute({ busy = () => false, log = () => {} } = {}) {
         w.stock = Math.min(999, Math.floor(next));
         w.updatedAt = Date.now();
         store.save();
-        let note = `'${w.name}' 미개봉 ${w.stock}병`;
-        if (w.stock === 0 && !w.opened && w.active) {
-          w.active = false;
-          store.save();
-          queueExpose(w, false, { auto: true });
-          note = `'${w.name}' 재고가 없어요. 비활성으로 옮기고 포스 노출을 끄는 중이에요`;
-        }
+        const note = soldOutCheck(w) || `'${store.label(w)}' 미개봉 ${w.stock}병`;
         push();
         return send(res, 200, { wine: w, note }), true;
       }
 
-      // 기능 4 — 새 와인 추가 (장부 먼저 저장 → 포스 등록 작업)
+      // 새 와인 — 포스에 상품을 등록한다 (목록에는 등록이 끝나야 판매중으로 올라간다)
       if (p === '/api/wine') {
-        const w = store.validate(store.normalize(body));
-        const dup = store.findDup(w);
-        if (dup) throw new Error(`'${dup.name}' 와(과) 겹쳐요. 이미 등록된 와인인지 확인해 주세요.`);
-        w.id = store.newId();
-        w.createdAt = Date.now();
-        w.active = false;              // 포스 등록이 끝나면 선택한 노출값으로 맞춘다
-        w.posExpose = null;
+        const posName = String(body.posName || '').trim().slice(0, 60);
+        const posPrice = Number(String(body.glassPrice ?? '').replace(/[^\d]/g, '')) || 0;
+        if (!posName) throw new Error('와인 이름을 입력해 주세요.');
+        if (!posPrice) throw new Error('글라스 가격을 입력해 주세요.');
+        if (!String(body.nameEn || '').trim()) throw new Error('영문 이름을 입력해 주세요. (포스 키오스크용)');
+        const dup = store.wines().find((o) => store.normName(o.posName) === store.normName(posName));
+        if (dup) throw new Error(`'${store.label(dup)}' 와(과) 이름이 겹쳐요.`);
+
+        const w = store.create({ posName, posPrice, expose: false });
+        store.applyEdits(w, body);
+        w.stock = Math.max(0, Number(String(body.stock ?? '').replace(/[^\d]/g, '')) || 0);
         w.posState = 'adding';
         w.posNote = '포스에 등록하는 중…';
-        w.image = null;
         if (body.image) { try { w.image = store.saveImage(w.id, body.image); } catch (e) { w.posNote = String(e.message); } }
         store.wines().unshift(w);
         store.save();
-        const job = queueAdd(w, body.expose !== false);
+        const job = queueAdd(w, body.nameEn, body.expose !== false);
         push();
         return send(res, 200, { wine: w, job }), true;
       }
 
-      // 포스에만 있는 상품을 장부에 등록 (포스에 이미 있으니 등록 작업은 하지 않는다)
-      if (p === '/api/wine/adopt') {
-        const w = store.validate(store.normalize(body));
-        const dup = store.findDup(w);
-        if (dup) throw new Error(`'${dup.name}' 와(과) 겹쳐요.`);
-        w.id = store.newId();
-        w.createdAt = Date.now();
-        w.active = !!body.expose;
-        w.posExpose = !!body.expose;
-        w.posState = 'ok';
-        w.posNote = '';
-        w.posSyncAt = Date.now();
-        w.image = null;
-        if (body.image) { try { w.image = store.saveImage(w.id, body.image); } catch {} }
-        store.wines().unshift(w);
-        const db = store.load();
-        db.posUnknown = (db.posUnknown || []).filter((u) => store.normName(u.name) !== store.normName(body.posName || body.name) || u.price !== w.posPrice);
-        store.save();
-        push();
-        return send(res, 200, { wine: w }), true;
-      }
-
-      // 상세 저장
+      // 상세 수정 — 포스가 주는 값(이름·글라스 가격)은 못 바꾸고, 적어두는 값만 바꾼다
       if (p === '/api/wine/update') {
         const w = need(body.id);
-        lock(w);
-        const next = store.validate(store.normalize(body, w));
-        const dup = store.findDup(next, w.id);
-        if (dup) throw new Error(`'${dup.name}' 와(과) 겹쳐요.`);
-        const priceChanged = next.posPrice !== w.posPrice;
-        Object.assign(w, next);
-        if (priceChanged) {
-          w.posNote = `포스에서 '${w.posName}' 의 기본가격도 ${w.posPrice.toLocaleString('ko-KR')}원으로 바꿔 주세요. (앱은 포스 가격을 바꾸지 못해요)`;
-        }
-        if (body.image) { try { w.image = store.saveImage(w.id, body.image); } catch (e) { throw new Error(String(e.message)); } }
+        store.applyEdits(w, body);
+        if (body.image) w.image = store.saveImage(w.id, body.image);
         if (body.image === null) store.removeImage(w);
         store.save();
-        let note = `'${w.name}' 저장했어요${priceChanged ? ' · 포스 가격은 직접 바꿔 주세요' : ''}`;
-        // 재고를 0 으로 고쳤는데 개봉한 병도 없으면 다 팔린 것 → 기능 3 과 같은 규칙
-        if (w.stock === 0 && !w.opened && w.active) {
-          w.active = false;
-          store.save();
-          queueExpose(w, false, { auto: true });
-          note = `'${w.name}' 저장했어요. 재고가 없어 비활성으로 옮기고 포스 노출을 끄는 중이에요`;
-        }
         push();
-        return send(res, 200, { wine: w, note }), true;
+        return send(res, 200, { wine: w, note: `'${store.label(w)}' 저장했어요` }), true;
       }
 
-      // 장부에서만 삭제 (포스 상품은 그대로 — 포스 삭제는 자동화되어 있지 않다)
-      if (p === '/api/wine/delete') {
+      // 포스 등록에 실패해 목록에만 남은 항목을 치우는 비상구 (평소에는 화면에 안 보인다)
+      if (p === '/api/wine/forget') {
         const w = need(body.id);
         lock(w);
+        if (w.posState !== 'failed') throw new Error('포스에 있는 와인은 포스에서 지워주세요. [포스에서 불러오기] 하면 목록에서도 사라져요.');
         store.removeImage(w);
         const db = store.load();
         db.wines = db.wines.filter((o) => o.id !== w.id);
         store.save();
         push();
-        return send(res, 200, { note: `'${w.name}' 를 장부에서 지웠어요. 포스 상품은 그대로 있어요.` }), true;
+        return send(res, 200, { note: `'${store.label(w)}' 를 목록에서 지웠어요.` }), true;
       }
 
       const retry = p.match(/^\/api\/wine\/jobs\/([\w]+)\/retry$/);
