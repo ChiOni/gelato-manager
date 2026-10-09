@@ -103,6 +103,48 @@ for official, price, want in LEDGER:
 ok(len(matched) == len(LEDGER), f'{len(LEDGER)}개 모두 매칭', f'매칭 {len(matched)}개')
 ok(len(left) == 0, '남은(장부에 없는) 포스 상품 0개', f'남음: {[r["name"] for r in left]}')
 
+print()
+print('화면 이동 — 상품 페이지 판별')
+PROD = [{'text': '고객용 노출', 'x': 1760, 'y': 260, 'w': 83, 'h': 12},
+        {'text': '성품•할인', 'x': 24, 'y': 88, 'w': 78, 'h': 18},
+        {'text': '상품', 'x': 317, 'y': 95, 'w': 37, 'h': 20}]
+MENU = [{'text': '상품', 'x': 690, 'y': 213, 'w': 29, 'h': 15},
+        {'text': '상품 • 할인', 'x': 690, 'y': 260, 'w': 73, 'h': 15},
+        {'text': '선불권', 'x': 690, 'y': 301, 'w': 42, 'h': 15},
+        {'text': '토스 지원 할인 • 이벤트', 'x': 690, 'y': 626, 'w': 154, 'h': 16},
+        {'text': '결제내역', 'x': 83, 'y': 260, 'w': 55, 'h': 15}]
+ok(P._product_page(PROD), '상품 목록 화면 인식 (고객용 노출 머리줄)')
+ok(not P._product_page(MENU), '메뉴 화면은 상품 목록이 아님')
+ok(not P._product_page([{'text': '진행 0', 'x': 38, 'y': 81, 'w': 42, 'h': 13}]), '주문 현황도 아님')
+
+print()
+print('화면 이동 — 메뉴에서 "상품 · 할인" 찾기')
+hit = P._menu_item(MENU)
+ok(hit is not None and hit['y'] == 260, '섹션 머리글 "상품" 말고 "상품 · 할인" 을 고름', f'고른 것: {hit}')
+ok(P._menu_item([{'text': '성품•할인', 'x': 690, 'y': 260, 'w': 73, 'h': 15}]) is not None,
+   "OCR 오타 '성품•할인' 도 찾음")
+ok(P._menu_item(PROD) is None, '상품 화면에서는 메뉴 항목으로 오인하지 않음')
+
+print()
+print('화면 이동 — 카테고리 탭 좌표 (와인은 OCR 이 못 읽는다)')
+# 젤라또가 선택된 실제 화면: '와인' 은 아예 안 읽히고 '젤라또' 는 '질라또' 로 읽혔다
+TABROW = [{'text': '전체', 'x': 336, 'y': 158, 'w': 25, 'h': 14},
+          {'text': '질라또', 'x': 403, 'y': 158, 'w': 38, 'h': 13},
+          {'text': '메뉴', 'x': 483, 'y': 158, 'w': 25, 'h': 13},
+          {'text': '무알콜', 'x': 621, 'y': 158, 'w': 38, 'h': 13},
+          {'text': '위스키', 'x': 698, 'y': 158, 'w': 37, 'h': 13}]
+pt = P._tab_point(TABROW, '와인')
+ok(pt is not None and 508 < pt[0] < 621, "안 읽힌 '와인' 을 메뉴~무알콜 사이로 추정", f'좌표: {pt}')
+ok(P._tab_point(TABROW, '젤라또')[0] == 422, "오타로 읽힌 '질라또' 도 젤라또 탭으로 인식")
+ok(P._tab_point([], '와인') is None, '탭 줄이 없으면 좌표 없음')
+
+print()
+print('화면 이동 — 좌상단 메뉴 버튼 위치')
+ok(P._menu_button([{'text': '테이블', 'x': 82, 'y': 20, 'w': 48, 'h': 17}]) == (36, 28),
+   "'테이블' 글자 기준 상대 위치 (배너로 밀려도 안전)")
+ok(P._menu_button([]) == (36, 29), '못 찾으면 기본 좌표')
+
+print()
 print('\n' + '-' * 44)
 print(f'통과 {passed} · 실패 {failed}')
 sys.exit(1 if failed else 0)

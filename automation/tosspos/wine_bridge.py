@@ -7,6 +7,7 @@ pos_screen.py 는 수정하지 않고 import 해서 쓴다 (검증된 동작 보
     python wine_bridge.py add    '{"posName":"가비 - 화이트","kioskName":"가비","kioskNameEn":"Gavi",
                                    "desc":"산뜻한 청사과 향","price":12000,"expose":true}'
 
+세 명령 모두 시작할 때 포스를 '상품 · 할인 > 와인' 화면으로 맞춘다(ensure_wine_list).
 표준출력에는 JSON 한 줄만 쓴다 (진행 로그는 표준오류로 — 섞이면 서버가 결과를 못 읽는다).
 실패하면 {"ok": false, "error": "..."} 를 출력하고 종료코드 1.
 """
@@ -52,6 +53,7 @@ def cmd_sync(arg):
     """포스 와인 탭 전체를 읽어 장부와 대조한다 (클릭 없음 — 읽기만)"""
     ledger = arg.get('wines') or []
     with P.Foreground():
+        P.ensure_wine_list(log=elog)   # 포스가 다른 페이지면 상품 · 할인 > 와인 으로 옮긴다
         rows = P.all_wines()
         P.scroll_top()  # 다음 작업이 맨 위에서 시작하도록 되돌려 둔다
 
@@ -98,7 +100,9 @@ def cmd_sync(arg):
 
 def cmd_expose(arg):
     """고객용 채널 노출 토글을 on/off 로 맞춘다 (set_expose 가 안전 확인 후에만 클릭)"""
-    r = P.set_expose(arg['posName'], bool(arg['on']), arg.get('posPrice'), log=elog)
+    with P.Foreground():
+        P.ensure_wine_list(log=elog)   # 포스가 다른 페이지면 먼저 와인 목록으로 옮긴다
+        r = P.set_expose(arg['posName'], bool(arg['on']), arg.get('posPrice'), log=elog)
     return {'ok': True, 'changed': r.get('changed'), 'name': r.get('name'), 'expose': r.get('expose')}
 
 
@@ -112,7 +116,9 @@ def cmd_add(arg):
         'category': arg.get('category') or '와인',
         'price': int(arg['price']),
     }
-    r = P.add_product(spec, log=elog, submit=True)
+    with P.Foreground():
+        P.ensure_wine_list(log=elog)   # [+ 상품 추가] 는 와인 목록 화면에서만 열린다
+        r = P.add_product(spec, log=elog, submit=True)
     out = {'ok': True, 'submitted': bool(r.get('submitted')), 'listed': bool(r.get('listed')), 'expose': True}
     # 포스 상품 추가는 '고객용 채널 노출' 이 기본 ON 으로 등록된다 → OFF 를 원하면 이어서 끈다
     if out['submitted'] and not arg.get('expose', True):

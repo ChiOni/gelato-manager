@@ -186,8 +186,18 @@ TABS = ('전체', '젤라또', '메뉴', '와인', '무알콜', '위스키')  # 
 
 
 def selected_tab(im, lines):
-    """상단 카테고리 탭 중 선택된(어두운 배경) 탭의 글자를 읽는다. 흰 글자라 색을 반전해서 OCR."""
-    anchor = next((l for l in lines if l['text'].strip() in TABS and 120 < l['y'] < 320 and l['x'] < 800), None)
+    """상단 카테고리 탭 중 선택된(어두운 배경) 탭 이름.
+
+    선택된 탭은 흰 글자라 OCR 이 못 읽을 때가 많지만, 가끔 오타로 읽히기도 한다('젤라또'→'질라또').
+    그래서 믿을 수 있는 신호인 '선택 배경색 구간'을 먼저 쓰고, 글자는 유사도로 맞춘다.
+    """
+    from difflib import SequenceMatcher
+    near = lambda t: max(TABS, key=lambda c: SequenceMatcher(None, c, t).ratio())
+    def as_tab(t):
+        c = near(t)
+        return c if SequenceMatcher(None, c, t).ratio() >= 0.6 else None
+
+    anchor = next((l for l in lines if as_tab(l['text'].strip()) and 120 < l['y'] < 320 and l['x'] < 800), None)
     if not anchor:
         return None
     y = anchor['y'] + anchor['h'] // 2
@@ -202,14 +212,121 @@ def selected_tab(im, lines):
     runs = [r for r in runs if r[1] - r[0] > 40]
     if len(runs) != 1:
         return None
-    # 선택된 탭은 흰 글자라 OCR 이 못 읽는다(짧은 단어라 반전해도 인식 안 됨).
-    # → 알려진 탭 중 화면에서 '읽히지 않은' 것이 정확히 하나면 그게 선택된 탭.
-    row = {l['text'].strip() for l in lines if abs((l['y'] + l['h'] // 2) - y) < 12}
-    missing = [t for t in TABS if t not in row]
-    unknown = [t for t in row if t not in TABS]
-    if len(missing) != 1 or unknown:
+    lo, hi = runs[0]
+    row = [l for l in lines if abs((l['y'] + l['h'] // 2) - y) < 12]
+
+    # 1) 선택 배경 위에서 글자가 읽혔으면 그게 선택된 탭 (오타는 유사도로 바로잡는다)
+    for l in row:
+        if lo <= l['x'] + l['w'] // 2 <= hi:
+            t = as_tab(l['text'].strip())
+            if t:
+                return t
+
+    # 2) 안 읽혔으면 소거법 — 알려진 탭 중 화면에서 읽히지 않은 것이 정확히 하나면 그게 선택된 탭
+    seen = {as_tab(l['text'].strip()) for l in row}
+    missing = [t for t in TABS if t not in seen]
+    return missing[0] if len(missing) == 1 else None
+
+
+# ---------- 화면 이동 (상품 · 할인 > 와인) ----------
+# 포스가 주문 현황 등 다른 페이지에 있어도 와인 목록까지 알아서 찾아간다.
+# 여기서 하는 클릭은 '화면 이동'뿐 — 상품 데이터는 건드리지 않는다.
+
+def _product_page(lines):
+    """상품 목록 화면인가 — 오른쪽 끝 '고객용 채널 노출' 머리줄로 판별 (wines() 와 같은 기준)"""
+    return any('노출' in l['text'] and l['x'] > 1650 and l['y'] < 500 for l in lines)
+
+
+def _menu_button(lines):
+    """좌상단 ≡ 위치. 배너 때문에 아래가 밀려도 맨 위 막대는 그대로라 '테이블' 글자를 기준으로 잡는다."""
+    nav = next((l for l in lines if l['text'].strip() == '테이블' and l['y'] < 60), None)
+    return (nav['x'] - 46, nav['y'] + nav['h'] // 2) if nav else (36, 29)
+
+
+def _menu_item(lines):
+    """열린 메뉴에서 '상품 · 할인' 줄. 섹션 머리글 '상품'(글자만)과 헷갈리지 않게 길이로 거른다.
+    OCR 이 '성품•할인' 처럼 읽기도 해서 유사도로 찾는다."""
+    from difflib import SequenceMatcher
+    want = '상품할인'
+    best = None
+    for l in lines:
+        if l['x'] < 600 or not (150 < l['y'] < 450):
+            continue
+        t = re.sub(r'[\s·•ㆍ∙.]', '', l['text'])
+        if len(t) < 3:
+            continue
+        r = SequenceMatcher(None, want, t).ratio()
+        if r >= 0.7 and (best is None or r > best[0]):
+            best = (r, l)
+    return best[1] if best else None
+
+
+def _tab_point(lines, name):
+    """카테고리 탭을 누를 좌표. '와인' 처럼 짧은 이름은 선택 여부와 상관없이 OCR 이 자주 못 읽어서,
+    안 읽히면 TABS 순서상 앞뒤로 읽힌 탭 사이의 가운데를 누른다."""
+    from difflib import SequenceMatcher
+    def as_tab(t):
+        c = max(TABS, key=lambda x: SequenceMatcher(None, x, t).ratio())
+        return c if SequenceMatcher(None, c, t).ratio() >= 0.6 else None
+
+    row = [l for l in lines if 120 < l['y'] < 320 and l['x'] < 1100 and as_tab(l['text'].strip())]
+    if not row:
         return None
-    return missing[0]
+    cy = min(row, key=lambda l: l['y'])
+    cy = cy['y'] + cy['h'] // 2
+    found = {}
+    for l in sorted(row, key=lambda l: l['x']):
+        t = as_tab(l['text'].strip())
+        found.setdefault(t, l)
+
+    if name in found:
+        l = found[name]
+        return (l['x'] + l['w'] // 2, cy)
+    i = TABS.index(name)
+    prev = next((found[TABS[k]] for k in range(i - 1, -1, -1) if TABS[k] in found), None)
+    nxt = next((found[TABS[k]] for k in range(i + 1, len(TABS)) if TABS[k] in found), None)
+    if prev and nxt:  # 읽힌 이웃 탭 사이의 빈 자리 = 못 읽은 탭
+        return ((prev['x'] + prev['w'] + nxt['x']) // 2, cy)
+    return None
+
+
+def ensure_wine_list(log=print, tries=6):
+    """포스를 '상품 · 할인 > 와인' 목록 화면으로 맞춘다. 이미 그 화면이면 아무것도 하지 않는다.
+    경로: (다른 페이지) → 좌상단 ≡ → '상품 · 할인' → 카테고리 탭 '와인'"""
+    moved = False
+    with Foreground():
+        for _ in range(tries):
+            im, (wl, wt) = capture()
+            lines = ocr(im)
+            at = lambda l: click_screen(wl + l['x'] + l['w'] // 2, wt + l['y'] + l['h'] // 2)
+
+            if _product_page(lines):
+                tab = selected_tab(im, lines)
+                if tab == '와인':
+                    return {'moved': moved, 'page': '상품 · 할인 > 와인'}
+                pt = _tab_point(lines, '와인')
+                if not pt:
+                    raise RuntimeError(f"상품 화면에서 '와인' 카테고리 탭 위치를 찾지 못했습니다 (지금 탭: {tab!r}).")
+                log(f"카테고리 {tab!r} → '와인' 으로 이동")
+                click_screen(wl + pt[0], wt + pt[1])
+                moved = True
+                time.sleep(1.2)
+                continue
+
+            item = _menu_item(lines)
+            if item:  # 메뉴가 열려 있다
+                log("메뉴에서 '상품 · 할인' 선택")
+                at(item)
+                moved = True
+                time.sleep(2.0)
+                continue
+
+            x, y = _menu_button(lines)
+            log('상품 화면이 아니라서 좌상단 메뉴를 엽니다')
+            click_screen(wl + x, wt + y)
+            moved = True
+            time.sleep(1.2)
+    raise RuntimeError('포스를 상품 > 와인 목록 화면으로 옮기지 못했습니다. 포스 화면을 직접 확인해 주세요.')
 
 
 def _norm(s):
@@ -584,6 +701,13 @@ if __name__ == '__main__':
     elif cmd == 'open-add':
         lines = open_add_form()
         print(json.dumps([(l['x'], l['y'], l['text']) for l in lines], ensure_ascii=False))
+    elif cmd == 'nav':
+        # python pos_screen.py nav — 포스를 상품 > 와인 화면으로 옮긴다 (이동 클릭만)
+        try:
+            print(json.dumps(ensure_wine_list(), ensure_ascii=False))
+        except RuntimeError as e:
+            print(f'중단: {e}')
+            sys.exit(1)
     elif cmd == 'expose':
         # python pos_screen.py expose "<와인 이름>" on|off [가격]
         name, onoff = sys.argv[2], sys.argv[3]
