@@ -10,6 +10,7 @@ import { newJob, runJob } from './lib/ops.mjs';
 import { figmaChannel } from './channels/figma.mjs';
 import { createKeeper } from './lib/figma-keeper.mjs';
 import { SECRETS_DIR } from './lib/secrets.mjs';
+import { wineRoute } from './lib/wine-api.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const HTTP_PORT = Number(process.env.MENU_PORT || 8787);
@@ -228,9 +229,13 @@ async function readBody(req) {
   return s ? JSON.parse(s) : {};
 }
 
+// 와인 탭 — /api/wine/* 와 /wine.js·/wine.css 를 전담한다 (젤라또와 상태·큐 분리)
+const wine = wineRoute({ busy: () => !!running, log });
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   try {
+    if (await wine(req, res, url)) return;
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) return send(res, 200, fs.readFileSync(INDEX, 'utf8'), 'text/html; charset=utf-8');
     if (req.method === 'GET' && ['/favicon.png', '/favicon.ico'].includes(url.pathname)) {
       res.writeHead(200, { 'content-type': url.pathname.endsWith('.png') ? 'image/png' : 'image/x-icon', 'cache-control': 'max-age=86400' });

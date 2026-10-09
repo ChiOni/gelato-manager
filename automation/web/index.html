@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="/wine.css">
 <style>
   :root {
     --bg: #f6f4f1;
@@ -36,6 +37,14 @@
   }
   button, input, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 160px; }
+
+  /* ---------- 상단 탭 ---------- */
+  .tabs { display: flex; align-items: center; gap: 2px; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
+  .tab { border: 0; background: transparent; padding: 13px 20px 12px; margin-bottom: -1px; font-size: 18px; font-weight: 800; letter-spacing: -0.03em; color: var(--faint); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab:hover { color: var(--sub); }
+  .tab.on { color: var(--brand); border-bottom-color: var(--brand); }
+  .tabs .conn { margin-left: auto; padding-bottom: 10px; }
+  body.tab-wine #dock { display: none; }  /* 와인 탭에서는 젤라또 작업 도크를 숨긴다 */
 
   header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
   .brand { display: flex; align-items: center; gap: 12px; }
@@ -187,17 +196,13 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="brand">
-      <div class="logo">S</div>
-      <div>
-        <h1>스쿱앤십 메뉴 관리</h1>
-        <p class="tagline">메뉴판(피그마) · 배달의민족 · 쿠팡이츠를 한 번에 바꿔요</p>
-      </div>
-    </div>
+  <nav class="tabs">
+    <button class="tab on" data-tab="gelato">젤라또</button>
+    <button class="tab" data-tab="wine">와인</button>
     <div class="conn" id="conn"><i></i><span>서버 연결 중…</span></div>
-  </header>
+  </nav>
 
+  <div id="tab-gelato">
   <section>
     <h2><span class="num">1</span>준비물 — 세 개 모두 초록불이어야 해요</h2>
     <div class="ready" id="ready"></div>
@@ -228,6 +233,9 @@
       </div>
     </div>
   </section>
+  </div>
+
+  <div id="tab-wine" hidden></div>
 </div>
 
 <div class="dock" id="dock"></div>
@@ -500,7 +508,23 @@ $('#search').addEventListener('input', (e) => { ui.q = e.target.value; renderOff
 $('#checkBtn').addEventListener('click', () => submit({ cmd: 'check' }, '배달앱 점검을 시작했어요'));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ui.open) { ui.open = null; render(); } });
 
+// ---------- 상단 탭 (젤라또 / 와인) ----------
+const TABNAMES = ['gelato', 'wine'];
+function showTab(name) {
+  if (!TABNAMES.includes(name)) name = 'gelato';
+  document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  TABNAMES.forEach((t) => { $('#tab-' + t).hidden = t !== name; });
+  document.body.classList.toggle('tab-wine', name === 'wine');
+  try { localStorage.setItem('menuTab', name); } catch {}
+  document.dispatchEvent(new CustomEvent('tab', { detail: name }));
+}
+document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+let startTab = 'gelato';
+try { startTab = localStorage.getItem('menuTab') || 'gelato'; } catch {}
+showTab(startTab);
+
 connect();
 </script>
+<script src="/wine.js"></script>
 </body>
 </html>
